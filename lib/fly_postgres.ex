@@ -12,7 +12,14 @@ defmodule Fly.Postgres do
   database. Stored as an ENV called `DATABASE_URL`.
   """
   def primary_db_url do
-    System.fetch_env!("DATABASE_URL")
+    raw_url = System.fetch_env!("DATABASE_URL")
+    primary = Fly.primary_region()
+
+    # Be more explicit with the primary DB host name to specify the region.
+    # Otherwise DNS might direct it somewhere else.
+    uri = URI.parse(raw_url)
+    primary_uri = %URI{uri | host: "#{primary}.#{uri.host}"}
+    URI.to_string(primary_uri)
   end
 
   @doc """
@@ -21,11 +28,12 @@ defmodule Fly.Postgres do
   instance is running.
   """
   def replica_db_url() do
+    raw_url = System.fetch_env!("DATABASE_URL")
     current = Fly.my_region()
 
     # Infer the replica URL. Assumed to be running in the region the app is
     # deployed to.
-    uri = URI.parse(primary_db_url())
+    uri = URI.parse(raw_url)
     replica_uri = %URI{uri | host: "#{current}.#{uri.host}", port: 5433}
     URI.to_string(replica_uri)
   end

@@ -18,7 +18,11 @@ defmodule Fly.PostgresTest do
 
   describe "primary_db_url/0" do
     test "returns DATABASE_URL" do
-      assert Fly.Postgres.primary_db_url() == System.get_env("DATABASE_URL")
+      url = Fly.Postgres.primary_db_url()
+      # Difference is that xyz is added to the host name to direct it to the primary region
+      # The port shoudl stay as 5433
+      assert url ==
+               "postgres://some-user:some-pass@xyz.my-app-db.internal:5432/some_app?sslmode=disable"
     end
   end
 

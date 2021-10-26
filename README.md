@@ -120,7 +120,7 @@ This example configuration says that the Sydney Australia region is the
 "primary" region. This is where the primary postgres database is created and
 where our application has fast write access to it.
 
-```toml
+```yaml
 [env]
   PRIMARY_REGION = "syd"
 ```
