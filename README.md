@@ -5,6 +5,9 @@ Ecto and PostgreSQL in a primary/replica configuration on [Fly.io](https://fly.i
 
 [Online Documentation](https://hexdocs.pm/fly_postgres)
 
+[Mark Ericksen's ElixirConf 2021 presentation](https://www.youtube.com/watch?v=IqnZnFpxLjI) explaining what this library is for
+and the problems it helps solve.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
