@@ -54,8 +54,8 @@ defmodule Fly.Postgres do
     if System.get_env("MIX_ENV") == "prod" do
       do_database_url(data)
     else
-      Logger.info("Using primary DB connection. Assumed DEV or TEST environment")
-      data.primary_url
+      Logger.info("Using raw DATABASE_URL. Assumed DEV or TEST environment")
+      System.fetch_env!("DATABASE_URL")
     end
   end
 
