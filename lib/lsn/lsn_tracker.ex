@@ -155,14 +155,24 @@ defmodule Fly.Postgres.LSN.Tracker do
        lsn_table: tab_lsn_cache,
        requests_table: tab_requests,
        frequency: Keyword.get(opts, :frequency, 100)
-     }}
+     }, {:continue, :initial_query}}
+  end
+
+  def handle_continue(:initial_query, state) do
+    # perform the initial query to populate the ETS table
+    query_last_replay(state)
+    {:noreply, state}
   end
 
   def handle_info(:run_process_notification_requests, state) do
-    # Setup side-effect for running continued checks or not
-    last_replay = query_last_replay(state)
+    # TODO: check if there are pending notifications. If not, schedule next check and do nothing.
+    # TODO: If there are pending notification requests, query for last replay and process list.
 
-    case last_replay do
+    # # Setup side-effect for running continued checks or not
+    # last_replay = query_last_replay(state)
+
+    # case last_replay do
+    case get_last_replay() do
       # if replication is not enabled, log message and don't schedule future checks
       %Fly.Postgres.LSN{source: :not_replicating} = _lsn ->
         if not Fly.is_primary?() do
@@ -173,7 +183,7 @@ defmodule Fly.Postgres.LSN.Tracker do
           )
         end
 
-      _other ->
+      %Fly.Postgres.LSN{} = _previous_replay ->
         # process the ETS entries for notification requests
         process_request_entries(last_replay, state.requests_table)
 
@@ -186,10 +196,10 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   # Query for the last replicated log sequence number and write it to the ETS
   # table.
-  defp query_last_replay(state) do
+  defp query_last_replay(lsn_table \\ @lsn_table) do
     Fly.Postgres.local_repo()
     |> Fly.Postgres.LSN.last_wal_replay()
-    |> put_lsn(state.lsn_table)
+    |> put_lsn(lsn_table)
   end
 
   @doc false
@@ -205,13 +215,16 @@ defmodule Fly.Postgres.LSN.Tracker do
   # the entry.
   @doc false
   # Private function
-  def process_request_entries(last_replay, requests_table) do
-    case :ets.match_object(requests_table, {:"$1", :"$2"}) do
+  def process_request_entries(requests_table) do
+    case fetch_request_entries(requests_table) do
       [] ->
         # Nothing to do. No outstanding requests being tracked
         :ok
 
       requests ->
+        # We have requests to process. Query for the latest replication LSN
+        last_replay = query_last_replay()
+        # Cycle and notify if replicated
         Enum.each(requests, fn {pid, lsn_insert} = entry ->
           # If the tracked LSN was already replicated, notify the pid and remove the
           # entry
@@ -223,5 +236,13 @@ defmodule Fly.Postgres.LSN.Tracker do
           end
         end)
     end
+  end
+
+  # Return the current list of LSN notification subscriptions.
+  # Reads from the ETS table.
+  @doc false
+  # Private function
+  def fetch_request_entries(requests_table \\ @request_tab) do
+    :ets.match_object(requests_table, {:"$1", :"$2"})
   end
 end
