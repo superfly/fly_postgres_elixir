@@ -129,6 +129,7 @@ For `dev` and `test` environments, you don't need to set anything as `false` is
 the default setting. This means the library doesn't try to rewrite your
 `DATABASE_URL` for your local development environment, breaking your ability to
 connect to the database!
+
 ### Primary Region
 
 If your application is deployed to multiple Fly.io regions, the instances (or
