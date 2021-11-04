@@ -50,8 +50,9 @@ defmodule Fly.Postgres do
       replica_url: replica_db_url()
     }
 
-    # Only check for non-primary DB URL in prod build
-    if System.get_env("MIX_ENV") == "prod" do
+    # Only rewrite the DB URL when configured to. Do this for prod build running
+    # on Fly
+    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
       do_database_url(data)
     else
       Logger.info("Using raw DATABASE_URL. Assumed DEV or TEST environment")

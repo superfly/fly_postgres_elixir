@@ -4,7 +4,7 @@ defmodule FlyPostgres.MixProject do
   def project do
     [
       app: :fly_postgres,
-      version: "0.1.9",
+      version: "0.1.10",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       name: "Fly Postgres",
