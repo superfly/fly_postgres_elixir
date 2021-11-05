@@ -48,7 +48,7 @@ defmodule FlyPostgres.MixProject do
 
   defp package do
     [
-      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"],
       maintainers: ["Mark Ericksen"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/superfly/fly_postgres_elixir"}
