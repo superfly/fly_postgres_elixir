@@ -110,6 +110,26 @@ actual `Ecto.Repo`. Following the above example, it should point to
 
 With these project plumbing changes, you application code can stay largely untouched!
 
+### Production Config
+
+In either `config/prod.exs` or `config/runtime.exs`, instruct the library to
+rewrite the `DATABASE_URL` used when connecting to the database. This takes into
+account which region is your primary region and attempts to connect to the
+primary or the replica accordingly.
+
+```elixir
+config :fly_postgres, rewrite_db_url: true
+```
+
+Without this setting, the `DATABASE_URL` will be used as-is. In production, this
+means your app running in a distant region will open DB connections to the
+distant primary database. This results in very slow database queries!
+
+For `dev` and `test` environments, you don't need to set anything as `false` is
+the default setting. This means the library doesn't try to rewrite your
+`DATABASE_URL` for your local development environment, breaking your ability to
+connect to the database!
+
 ### Primary Region
 
 If your application is deployed to multiple Fly.io regions, the instances (or
