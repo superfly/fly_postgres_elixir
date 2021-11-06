@@ -4,8 +4,9 @@ defmodule FlyPostgres.MixProject do
   def project do
     [
       app: :fly_postgres,
-      version: "0.1.10",
+      version: "0.1.11",
       elixir: "~> 1.12",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       name: "Fly Postgres",
       source_url: "https://github.com/superfly/fly_postgres_elixir",
@@ -22,6 +23,10 @@ defmodule FlyPostgres.MixProject do
       extra_applications: [:logger]
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
