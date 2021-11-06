@@ -258,3 +258,19 @@ Fly.RPC.rpc_region(:primary, MyModule, :do_work, [arg1, arg2])
 ```
 
 This also works when modifying the database too.
+
+## LSN Polling
+
+The library polls the local database for what point in the replication process
+it has gotten to. It uses the LSN (Log Sequence Number) to determine that. Using
+this information, a process making changes against the primary database can
+request to be notified once the LSN it cares about has been replicated. This
+enables blocking operations that pause and wait for replication to complete.
+
+The active polling only happens once a process has requested to be notified.
+When there are no pending requests, there is no active polling. Also, there can
+be many active pending requests and still there will be only 1 polling process.
+So each waiting process isn't polling the database itself.
+
+The polling design scales well and doesn't perform work when there is nothing to
+track.
