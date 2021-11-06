@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.11 (2021-11-06)
+
+- Enhancement: Internally, improved logic around polling the database for the replication status. Only polls when there is a request for replication notification.
+
 ## v0.1.10 (2021-11-04)
 
 ### Enhancements
