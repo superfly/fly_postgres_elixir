@@ -274,3 +274,49 @@ So each waiting process isn't polling the database itself.
 
 The polling design scales well and doesn't perform work when there is nothing to
 track.
+
+## Backup Regions
+
+By default, Fly.io defines some "backup regions" where your app may be deployed.
+This can happen even during a normal deploy where the app instance created for
+running database migrations could come up in a backup region.
+
+The `fly_postgres` library makes an important assumption: that the app instance
+is always running in a region with either the primary or replica database.
+
+To make your deployments reliably end up in a desired region, we'll disable the
+backup regions. Or rather, explicitly set which regions should be use as backup
+regions.
+
+To see you current set of backup regions:
+
+```shell
+fly regions backup list
+```
+
+If you want to serve 2 regions like `lax` and `syd`, then you can the backup regions like this:
+
+```shell
+fly regions backup lax syd
+```
+
+This makes the backup regions only use the desired regions.
+
+## Ensuring a Deployment in your Primary Region
+
+Currently it is possible to be configured for two regions, scale your app to 2
+instances and end up with both app instances in the **same region**! Clearly,
+when one app needs to be running in the primary region in order to receive the
+RPC calls, it's really important that it consistently be there!
+
+A Fly.io config option lets us have more control over that.
+
+```shell
+fly scale count 2 --max-per-region 1
+```
+
+Using the `--max-per-region 1` ensures each region will not get an unbalanced
+number like 2 in one place.
+
+If your scale count matches up with your desired number of regions, then they
+will be evenly distributed.
