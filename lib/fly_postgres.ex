@@ -10,32 +10,46 @@ defmodule Fly.Postgres do
   Return the database url used for connecting to the primary database. This is
   provided by the Fly.io platform when you have attached to a PostgreSQL
   database. Stored as an ENV called `DATABASE_URL`.
-  """
-  def primary_db_url do
-    raw_url = System.fetch_env!("DATABASE_URL")
-    primary = Fly.primary_region()
 
-    # Be more explicit with the primary DB host name to specify the region.
-    # Otherwise DNS might direct it somewhere else.
-    uri = URI.parse(raw_url)
-    primary_uri = %URI{uri | host: "#{primary}.#{uri.host}"}
-    URI.to_string(primary_uri)
+  If `rewrite_db_url` is disabled, a `nil` is returned for the url.
+  """
+  @spec primary_db_url :: nil | String.t() | no_return()
+  def primary_db_url do
+    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
+      raw_url = System.fetch_env!("DATABASE_URL")
+      primary = Fly.primary_region()
+
+      # Be more explicit with the primary DB host name to specify the region.
+      # Otherwise DNS might direct it somewhere else.
+      uri = URI.parse(raw_url)
+      primary_uri = %URI{uri | host: "#{primary}.#{uri.host}"}
+      URI.to_string(primary_uri)
+    else
+      nil
+    end
   end
 
   @doc """
   Return a database url used for connecting to a replica database. This makes
   the assumption that there is a replica running in the region where the app
   instance is running.
-  """
-  def replica_db_url() do
-    raw_url = System.fetch_env!("DATABASE_URL")
-    current = Fly.my_region()
 
-    # Infer the replica URL. Assumed to be running in the region the app is
-    # deployed to.
-    uri = URI.parse(raw_url)
-    replica_uri = %URI{uri | host: "#{current}.#{uri.host}", port: 5433}
-    URI.to_string(replica_uri)
+  If `rewrite_db_url` is disabled, a `nil` is returned for the url.
+  """
+  @spec replica_db_url :: nil | String.t() | no_return()
+  def replica_db_url() do
+    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
+      raw_url = System.fetch_env!("DATABASE_URL")
+      current = Fly.my_region()
+
+      # Infer the replica URL. Assumed to be running in the region the app is
+      # deployed to.
+      uri = URI.parse(raw_url)
+      replica_uri = %URI{uri | host: "#{current}.#{uri.host}", port: 5433}
+      URI.to_string(replica_uri)
+    else
+      nil
+    end
   end
 
   @doc """
@@ -51,14 +65,7 @@ defmodule Fly.Postgres do
       replica_url: replica_db_url()
     }
 
-    # Only rewrite the DB URL when configured to. Do this for prod build running
-    # on Fly
-    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
-      do_database_url(data)
-    else
-      Logger.debug("fly_postgres not configured to rewrite_db_url. Assumed DEV or TEST environment")
-      nil
-    end
+    do_database_url(data)
   end
 
   defp do_database_url(%{primary: pri, current: curr} = data) when pri == curr do
