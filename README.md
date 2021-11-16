@@ -126,9 +126,7 @@ means your app running in a distant region will open DB connections to the
 distant primary database. This results in very slow database queries!
 
 For `dev` and `test` environments, you don't need to set anything as `false` is
-the default setting. This means the library doesn't try to rewrite your
-`DATABASE_URL` for your local development environment, breaking your ability to
-connect to the database!
+the default setting.
 
 ### Primary Region
 

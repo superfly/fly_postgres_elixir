@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.12 (2021-11-16)
+
+- Fix: For dev and test environments, return `nil` for customized DATABASE_URL setting. This removes requirement for setting the DATABASE_URL in an ENV for local dev and test. Additionally, this fixes an issue where the dev database was being used when running tests.
+
 ## v0.1.11 (2021-11-06)
 
 - Enhancement: Internally, improved logic around polling the database for the replication status. Only polls when there is a request for replication notification.
