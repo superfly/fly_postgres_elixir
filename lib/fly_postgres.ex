@@ -42,6 +42,7 @@ defmodule Fly.Postgres do
   Compute the database url to use for this app given the current configuration
   and runtime environment.
   """
+  @spec database_url :: nil | String.t()
   def database_url do
     data = %{
       primary: Fly.primary_region(),
@@ -55,8 +56,7 @@ defmodule Fly.Postgres do
     if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
       do_database_url(data)
     else
-      Logger.info("Using raw DATABASE_URL. Assumed DEV or TEST environment")
-      System.fetch_env!("DATABASE_URL")
+      Logger.debug("fly_postgres not configured to rewrite_db_url. Assumed DEV or TEST environment")
       nil
     end
   end
