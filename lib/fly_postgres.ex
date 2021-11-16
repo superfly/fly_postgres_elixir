@@ -57,6 +57,7 @@ defmodule Fly.Postgres do
     else
       Logger.info("Using raw DATABASE_URL. Assumed DEV or TEST environment")
       System.fetch_env!("DATABASE_URL")
+      nil
     end
   end
 
