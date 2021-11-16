@@ -6,6 +6,11 @@ defmodule Fly.Postgres do
   """
   require Logger
 
+  @doc false
+  def rewrite_db_url? do
+    Application.get_env(:fly_postgres, :rewrite_db_url) || false
+  end
+
   @doc """
   Return the database url used for connecting to the primary database. This is
   provided by the Fly.io platform when you have attached to a PostgreSQL
@@ -15,7 +20,7 @@ defmodule Fly.Postgres do
   """
   @spec primary_db_url :: nil | String.t() | no_return()
   def primary_db_url do
-    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
+    if rewrite_db_url?() do
       raw_url = System.fetch_env!("DATABASE_URL")
       primary = Fly.primary_region()
 
@@ -38,7 +43,7 @@ defmodule Fly.Postgres do
   """
   @spec replica_db_url :: nil | String.t() | no_return()
   def replica_db_url() do
-    if Application.get_env(:fly_postgres, :rewrite_db_url, false) do
+    if rewrite_db_url?() do
       raw_url = System.fetch_env!("DATABASE_URL")
       current = Fly.my_region()
 
