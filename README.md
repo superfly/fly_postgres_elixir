@@ -91,6 +91,30 @@ config :fly_postgres, :local_repo, MyApp.Repo.Local
 This helps the library to know which repo to use when talking to the database to
 ensure the needed replications have completed.
 
+In your `config/prod.exs`, add the following:
+
+```elixir
+# Instruct Fly.Postgres to operate in "prod" mode and do DB URL rewrites
+config :fly_postgres, :rewrite_db_url, true
+```
+
+### Releases and Migrations
+
+Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
+
+The `load_app` function can be changed like this:
+
+```elixir
+  defp load_app do
+    Application.load(:fly_postgres)
+    Application.load(@app)
+  end
+```
+
+Once the configuration is loaded, the database migrations can be run as
+expected. Without this step, your deployment will fail when running migrations
+because the database connection settings will be wrong.
+
 ### Repo References
 
 The goal with using this repo wrapper, is to leave all of your application code
