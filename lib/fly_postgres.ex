@@ -8,7 +8,6 @@ defmodule Fly.Postgres do
 
   @doc false
   def rewrite_db_url? do
-    Logger.warn("FETCHING Fly.Postgres Application.get_env... WHAT'S GOING ON?? #{inspect(Application.get_env(:fly_postgres, :rewrite_db_url))}")
     Application.get_env(:fly_postgres, :rewrite_db_url, false)
   end
 
