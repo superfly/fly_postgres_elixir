@@ -9,7 +9,7 @@ defmodule Fly.Postgres do
   @doc false
   def rewrite_db_url? do
     IO.puts "EXECUTE Fly.Postgres.rewrite_db_url?"
-    Application.get_env(:fly_postgres, :rewrite_db_url) || false
+    Application.get_env(:fly_postgres, :rewrite_db_url, false)
   end
 
   @doc """
