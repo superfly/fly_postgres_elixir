@@ -13,6 +13,8 @@ defmodule Fly.PostgresTest do
        "postgres://some-user:some-pass@my-app-db.internal:5432/some_app?sslmode=disable"}
     ])
 
+    Application.put_env(:fly_postgres, :rewrite_db_url, true)
+
     %{}
   end
 
