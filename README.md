@@ -109,7 +109,7 @@ If this is missing in production, it results in database connection failure.
 
 ### Releases and Migrations
 
-Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
+Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you _may_ need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
 
 The `load_app` function can be changed like this:
 
