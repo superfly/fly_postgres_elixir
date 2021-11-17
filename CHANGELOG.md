@@ -3,6 +3,8 @@
 ## v0.1.12 (2021-11-16)
 
 - Fix: For dev and test environments, return `nil` for customized DATABASE_URL setting. This removes requirement for setting the DATABASE_URL in an ENV for local dev and test. Additionally, this fixes an issue where the dev database was being used when running tests.
+- Added usage documentation in the README under "Config Files"
+- New usage documentation section in README titled "Releases and Migrations"
 
 ## v0.1.11 (2021-11-06)
 
