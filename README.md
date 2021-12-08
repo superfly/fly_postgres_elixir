@@ -195,6 +195,10 @@ The following changes were made:
 
 ## Usage
 
+### Local Development
+
+If you get an error like `(ArgumentError) could not fetch environment variable "PRIMARY_REGION" because it is not set` then see the [README docs in `fly_rpc`](https://github.com/superfly/fly_rpc_elixir#local-development) for details on setting up your local development environment.
+
 ### Automatic Usage
 
 Normal calls like `MyApp.Repo.all(User)` are performed on the local replica
