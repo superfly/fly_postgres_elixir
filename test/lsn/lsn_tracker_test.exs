@@ -19,7 +19,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
     server =
       Tracker.start_link(
-        FakeRepo,
+        repo: FakeRepo,
         name: :test_tracker,
         lsn_table_name: @test_lsn_table,
         requests_table_name: @test_requests
@@ -31,6 +31,14 @@ defmodule Fly.Postgres.LSN.TrackerTest do
     Process.sleep(50)
 
     %{server: server, insert_lsn: insert_lsn, replay_lsn: replay_lsn}
+  end
+
+  describe "start_link/1" do
+    test "initial repo state set correctly" do
+      {:ok, _pid} = Tracker.start_link(repo: FakeRepo, name: :chump)
+      new_state = :sys.get_state(:chump)
+      assert %{repo: Fly.Postgres.FakeRepo} = new_state
+    end
   end
 
   describe "initial query" do

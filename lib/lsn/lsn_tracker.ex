@@ -23,9 +23,10 @@ defmodule Fly.Postgres.LSN.Tracker do
   @doc """
   Start the Tracker that tracks Postgres LSN replication progress on the `Ecto.Repo`.
   """
-  def start_link(repo, opts \\ []) do
+  def start_link(opts \\ []) do
+    _repo = Keyword.fetch!(opts, :repo)
     name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, [repo: repo] ++ opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @doc """
