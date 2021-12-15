@@ -19,6 +19,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
     server =
       Tracker.start_link(
+        FakeRepo,
         name: :test_tracker,
         lsn_table_name: @test_lsn_table,
         requests_table_name: @test_requests
@@ -103,6 +104,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
   describe "process_request_entries/1" do
     setup do
       %{
+        repo: FakeRepo,
         lsn_table: @test_lsn_table,
         requests_table: @test_requests
       }

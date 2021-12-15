@@ -21,11 +21,11 @@ defmodule Fly.Postgres.LSN.Tracker do
   ###
 
   @doc """
-  Start the Tracker that receives work requests.
+  Start the Tracker that tracks Postgres LSN replication progress on the `Ecto.Repo`.
   """
-  def start_link(opts \\ []) do
+  def start_link(repo, opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, [repo: repo] ++ opts, name: name)
   end
 
   @doc """
@@ -151,13 +151,14 @@ defmodule Fly.Postgres.LSN.Tracker do
      %{
        lsn_table: tab_lsn_cache,
        requests_table: tab_requests,
-       frequency: Keyword.get(opts, :frequency, 100)
+       frequency: Keyword.get(opts, :frequency, 100),
+       repo: Keyword.fetch!(opts, :repo)
      }, {:continue, :initial_query}}
   end
 
   def handle_continue(:initial_query, state) do
     # perform the initial query to populate the ETS table
-    query_last_replay(state.lsn_table)
+    query_last_replay(state.repo, state.lsn_table)
 
     # schedule the first check which triggers the ongoing checks
     send(self(), :run_process_notification_requests)
@@ -174,8 +175,8 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   # Query for the last replicated log sequence number and write it to the ETS
   # table.
-  defp query_last_replay(lsn_table) do
-    Fly.Postgres.local_repo()
+  defp query_last_replay(repo, lsn_table) do
+    repo
     |> Fly.Postgres.LSN.last_wal_replay()
     |> put_lsn(lsn_table)
   end
@@ -193,7 +194,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   # the entry.
   @doc false
   # Private function
-  def process_request_entries(%{requests_table: requests_table, lsn_table: lsn_table}) do
+  def process_request_entries(%{repo: repo, requests_table: requests_table, lsn_table: lsn_table}) do
     case fetch_request_entries(requests_table) do
       [] ->
         # Nothing to do. No outstanding requests being tracked
@@ -201,7 +202,7 @@ defmodule Fly.Postgres.LSN.Tracker do
 
       requests ->
         # We have requests to process. Query for the latest replication LSN
-        last_replay = query_last_replay(lsn_table)
+        last_replay = query_last_replay(repo, lsn_table)
         # Cycle and notify if replicated
         Enum.each(requests, fn {pid, lsn_insert} = entry ->
           # If the tracked LSN was already replicated, notify the pid and remove the
