@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.13 (2021-12-28)
+
+- Improvement: Use new Fly.io internal DNS feature to connect to the "nearest" replica database when deployed to a region other than the primary region.
+
 ## v0.1.12 (2021-11-16)
 
 - Fix: For dev and test environments, return `nil` for customized DATABASE_URL setting. This removes requirement for setting the DATABASE_URL in an ENV for local dev and test. Additionally, this fixes an issue where the dev database was being used when running tests.

@@ -45,12 +45,11 @@ defmodule Fly.Postgres do
   def replica_db_url() do
     if rewrite_db_url?() do
       raw_url = System.fetch_env!("DATABASE_URL")
-      current = Fly.my_region()
 
       # Infer the replica URL. Assumed to be running in the region the app is
       # deployed to.
       uri = URI.parse(raw_url)
-      replica_uri = %URI{uri | host: "#{current}.#{uri.host}", port: 5433}
+      replica_uri = %URI{uri | host: "top1.nearest.of.#{uri.host}", port: 5433}
       URI.to_string(replica_uri)
     else
       nil

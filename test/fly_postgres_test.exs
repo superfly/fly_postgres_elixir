@@ -36,7 +36,7 @@ defmodule Fly.PostgresTest do
 
     test "includes current FLY_REGION in host name" do
       result = Fly.Postgres.replica_db_url()
-      assert String.contains?(result, "@abc.my-app-db.internal")
+      assert String.contains?(result, "@top1.nearest.of.my-app-db.internal")
     end
   end
 end
