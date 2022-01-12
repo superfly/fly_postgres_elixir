@@ -90,11 +90,15 @@ defmodule Fly.Postgres.LSN.Tracker do
   completed and wait for it to complete. Optionally it may timeout if it takes
   too long.
   """
-  @spec request_and_await_notification(Fly.Postgres.LSN.t(), timeout :: integer) ::
+  @spec request_and_await_notification(Fly.Postgres.LSN.t(), Atom, timeout :: integer) ::
           :ready | {:error, :timeout}
-  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, timeout \\ 5_000) do
+  def request_and_await_notification(
+        %Fly.Postgres.LSN{source: :insert} = lsn,
+        adapter,
+        timeout \\ 5_000
+      ) do
     # Don't register notification request or wait when on the primary
-    if Fly.is_primary?() do
+    if adapter.is_primary?() do
       :ready
     else
       # First check if the data is already in the cache. If so, return
