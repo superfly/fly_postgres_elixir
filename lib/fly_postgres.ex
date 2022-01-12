@@ -139,7 +139,10 @@ defmodule Fly.Postgres do
     {lsn_value, result} =
       Fly.RPC.rpc_region(:primary, __MODULE__, :__rpc_lsn__, [module, func, args], opts)
 
-    case Fly.Postgres.LSN.Tracker.request_and_await_notification(lsn_value) do
+    case Fly.Postgres.LSN.Tracker.request_and_await_notification(
+           lsn_value,
+           Fly.Postgres.Adapters.Fly
+         ) do
       :ready ->
         result
 

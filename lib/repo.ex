@@ -33,7 +33,9 @@ defmodule Fly.Repo do
   end
 
   defmodule Core.Repo do
-    use Fly.Repo, local_repo: MyApp.Repo.Local
+    use Fly.Repo,
+      local_repo: MyApp.Repo.Local,
+      adapter: Fly.Postgres.Adapters.Fly
   end
   ```
 
@@ -53,7 +55,8 @@ defmodule Fly.Repo do
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       @local_repo Keyword.fetch!(opts, :local_repo)
-      @timeout Keyword.get(opts, :timeout, 5_000)
+      @adapter Keyword.get(opts, :adapter, Fly.Postgres.Adapters.Fly)
+      @opts opts
 
       # Here we are injecting as little as possible then calling out to the
       # library functions.
@@ -329,13 +332,7 @@ defmodule Fly.Repo do
       end
 
       def __exec_on_primary__(func, args, opts) do
-        # Default behavior is to wait for replication. If `:await` is set to
-        # false/falsey then skip the LSN query and waiting for replication.
-        if Keyword.get(opts, :await, true) do
-          Fly.Postgres.rpc_and_wait(@local_repo, func, args, timeout: @timeout)
-        else
-          Fly.rpc_primary(@local_repo, func, args, timeout: @timeout)
-        end
+        @adapter.exec_on_primary(func, args, opts, @opts)
       end
     end
   end
