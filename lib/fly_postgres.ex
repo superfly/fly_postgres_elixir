@@ -29,6 +29,8 @@ defmodule Fly.Postgres do
       uri = URI.parse(raw_url)
       primary_uri = %URI{uri | host: "#{primary}.#{uri.host}"}
       URI.to_string(primary_uri)
+
+      raw_url
     else
       nil
     end
@@ -49,7 +51,7 @@ defmodule Fly.Postgres do
       # Infer the replica URL. Assumed to be running in the region the app is
       # deployed to.
       uri = URI.parse(raw_url)
-      replica_uri = %URI{uri | host: "top1.nearest.of.#{uri.host}", port: 5433}
+      replica_uri = %URI{uri | port: 5433}
       URI.to_string(replica_uri)
     else
       nil
