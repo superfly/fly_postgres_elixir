@@ -51,7 +51,7 @@ defmodule MyApp.Repo.Local do
 
   # Dynamically configure the database url based on runtime environment.
   def init(_type, config) do
-    {:ok, Keyword.put(config, :url, Fly.Postgres.database_url())}
+    Fly.Postgres.config_repo_url(config)
   end
 end
 
@@ -178,7 +178,7 @@ defmodule MyApp.Application do
       # Start the Ecto repository
       MyApp.Repo.Local,
       # Start the tracker after your DB.
-      {Fly.Postgres.LSN.Tracker, []},
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local},
       #...
     ]
 

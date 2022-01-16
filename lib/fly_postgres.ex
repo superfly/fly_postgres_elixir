@@ -6,6 +6,17 @@ defmodule Fly.Postgres do
   """
   require Logger
 
+  @spec config_repo_url(config :: keyword()) :: {:ok, keyword()}
+  def config_repo_url(config) do
+    # If the config contains a database URL, we'll use that to potentially
+    # re-write to hit the replica if in a replica region.
+    if Keyword.has_key?(config, :url) do
+      {:ok, Fly.Postgres.rewrite_database_url(config)}
+    else
+      {:ok, config}
+    end
+  end
+
   @doc false
   def rewrite_db_url? do
     Application.get_env(:fly_postgres, :rewrite_db_url, false)
@@ -55,6 +66,33 @@ defmodule Fly.Postgres do
       URI.to_string(replica_uri)
     else
       nil
+    end
+  end
+
+  @doc """
+  Return a database url used for connecting to a replica database. Changes the
+  port to target a replica instance that is assumed to be available.
+  """
+  @spec replica_db_url(url :: String.t()) :: String.t()
+  def replica_db_url(url) do
+    # Infer the replica URL. Change the port to target a replica instance.
+    uri = URI.parse(url)
+    replica_uri = %URI{uri | port: 5433}
+    URI.to_string(replica_uri)
+  end
+
+  @doc """
+  Compute the database url to use for this app given the current configuration
+  and runtime environment.
+  """
+  @spec rewrite_database_url(config :: keyword()) :: keyword()
+  def rewrite_database_url(config) do
+    # if running on the primary, return config unchanged
+    if Fly.is_primary?() do
+      config
+    else
+      # change the config to connect to replica
+      Keyword.put(config, :url, replica_db_url(Keyword.get(config, :url)))
     end
   end
 
