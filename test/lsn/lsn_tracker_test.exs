@@ -21,7 +21,8 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       Tracker.start_link(
         name: :test_tracker,
         lsn_table_name: @test_lsn_table,
-        requests_table_name: @test_requests
+        requests_table_name: @test_requests,
+        repo: FakeRepo
       )
 
     # sleep for a few ms before running tests. Lets the server get started and create
@@ -104,7 +105,8 @@ defmodule Fly.Postgres.LSN.TrackerTest do
     setup do
       %{
         lsn_table: @test_lsn_table,
-        requests_table: @test_requests
+        requests_table: @test_requests,
+        repo: FakeRepo
       }
     end
 

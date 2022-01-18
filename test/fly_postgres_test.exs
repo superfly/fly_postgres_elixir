@@ -4,39 +4,18 @@ defmodule Fly.PostgresTest do
 
   doctest Fly.Postgres
 
+  @url "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"
+
   setup do
-    System.put_env([{"FLY_REGION", "abc"}])
-    System.put_env([{"PRIMARY_REGION", "xyz"}])
-
-    System.put_env([
-      {"DATABASE_URL",
-       "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"}
-    ])
-
-    Application.put_env(:fly_postgres, :rewrite_db_url, true)
+    System.put_env([{"FLY_REGION", "abc"}, {"PRIMARY_REGION", "xyz"}, {"DATABASE_URL", @url}])
 
     %{}
   end
 
-  describe "primary_db_url/0" do
-    test "returns DATABASE_URL" do
-      url = Fly.Postgres.primary_db_url()
-      # Difference is that xyz is added to the host name to direct it to the primary region
-      # The port shoudl stay as 5433
-      assert url ==
-               "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"
-    end
-  end
-
-  describe "replica_db_url/0" do
+  describe "replica_db_url/1" do
     test "changes port to 5433" do
-      result = Fly.Postgres.replica_db_url()
+      result = Fly.Postgres.replica_db_url(@url)
       assert String.contains?(result, "5433")
-    end
-
-    test "includes current FLY_REGION in host name" do
-      result = Fly.Postgres.replica_db_url()
-      assert String.contains?(result, "@top2.nearest.of.my-app-db.internal")
     end
   end
 

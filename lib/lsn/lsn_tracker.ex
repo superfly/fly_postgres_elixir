@@ -24,6 +24,9 @@ defmodule Fly.Postgres.LSN.Tracker do
   Start the Tracker that receives work requests.
   """
   def start_link(opts \\ []) do
+    if !Keyword.has_key?(opts, :repo) do
+      raise ArgumentError, ":repo must be given when starting the LSN Tracker"
+    end
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, opts, name: name)
   end
@@ -138,6 +141,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   ###
 
   def init(opts) do
+    repo = Keyword.fetch!(opts, :repo)
     lsn_table_name = Keyword.get(opts, :lsn_table_name, @lsn_table)
     requests_table_name = Keyword.get(opts, :requests_table_name, @request_tab)
 
@@ -151,13 +155,14 @@ defmodule Fly.Postgres.LSN.Tracker do
      %{
        lsn_table: tab_lsn_cache,
        requests_table: tab_requests,
-       frequency: Keyword.get(opts, :frequency, 100)
+       frequency: Keyword.get(opts, :frequency, 100),
+       repo: repo
      }, {:continue, :initial_query}}
   end
 
   def handle_continue(:initial_query, state) do
     # perform the initial query to populate the ETS table
-    query_last_replay(state.lsn_table)
+    query_last_replay(state)
 
     # schedule the first check which triggers the ongoing checks
     send(self(), :run_process_notification_requests)
@@ -174,8 +179,8 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   # Query for the last replicated log sequence number and write it to the ETS
   # table.
-  defp query_last_replay(lsn_table) do
-    Fly.Postgres.local_repo()
+  defp query_last_replay(%{lsn_table: lsn_table, repo: repo} = _state) do
+    repo
     |> Fly.Postgres.LSN.last_wal_replay()
     |> put_lsn(lsn_table)
   end
@@ -193,7 +198,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   # the entry.
   @doc false
   # Private function
-  def process_request_entries(%{requests_table: requests_table, lsn_table: lsn_table}) do
+  def process_request_entries(%{requests_table: requests_table} = state) do
     case fetch_request_entries(requests_table) do
       [] ->
         # Nothing to do. No outstanding requests being tracked
@@ -201,7 +206,7 @@ defmodule Fly.Postgres.LSN.Tracker do
 
       requests ->
         # We have requests to process. Query for the latest replication LSN
-        last_replay = query_last_replay(lsn_table)
+        last_replay = query_last_replay(state)
         # Cycle and notify if replicated
         Enum.each(requests, fn {pid, lsn_insert} = entry ->
           # If the tracked LSN was already replicated, notify the pid and remove the

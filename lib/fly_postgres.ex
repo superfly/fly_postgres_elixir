@@ -17,70 +17,6 @@ defmodule Fly.Postgres do
     end
   end
 
-  @doc false
-  def rewrite_db_url? do
-    Application.get_env(:fly_postgres, :rewrite_db_url, false)
-  end
-
-  @doc """
-  Return the database url used for connecting to the primary database. This is
-  provided by the Fly.io platform when you have attached to a PostgreSQL
-  database. Stored as an ENV called `DATABASE_URL`.
-
-  If `rewrite_db_url` is disabled, a `nil` is returned for the url.
-  """
-  @spec primary_db_url :: nil | String.t() | no_return()
-  def primary_db_url do
-    if rewrite_db_url?() do
-      raw_url = System.fetch_env!("DATABASE_URL")
-      primary = Fly.primary_region()
-
-      # Be more explicit with the primary DB host name to specify the region.
-      # Otherwise DNS might direct it somewhere else.
-      uri = URI.parse(raw_url)
-      primary_uri = %URI{uri | host: "#{primary}.#{uri.host}"}
-      URI.to_string(primary_uri)
-
-      raw_url
-    else
-      nil
-    end
-  end
-
-  @doc """
-  Return a database url used for connecting to a replica database. This makes
-  the assumption that there is a replica running in the region where the app
-  instance is running.
-
-  If `rewrite_db_url` is disabled, a `nil` is returned for the url.
-  """
-  @spec replica_db_url :: nil | String.t() | no_return()
-  def replica_db_url() do
-    if rewrite_db_url?() do
-      raw_url = System.fetch_env!("DATABASE_URL")
-
-      # Infer the replica URL. Assumed to be running in the region the app is
-      # deployed to.
-      uri = URI.parse(raw_url)
-      replica_uri = %URI{uri | port: 5433}
-      URI.to_string(replica_uri)
-    else
-      nil
-    end
-  end
-
-  @doc """
-  Return a database url used for connecting to a replica database. Changes the
-  port to target a replica instance that is assumed to be available.
-  """
-  @spec replica_db_url(url :: String.t()) :: String.t()
-  def replica_db_url(url) do
-    # Infer the replica URL. Change the port to target a replica instance.
-    uri = URI.parse(url)
-    replica_uri = %URI{uri | port: 5433}
-    URI.to_string(replica_uri)
-  end
-
   @doc """
   Compute the database url to use for this app given the current configuration
   and runtime environment.
@@ -97,29 +33,15 @@ defmodule Fly.Postgres do
   end
 
   @doc """
-  Compute the database url to use for this app given the current configuration
-  and runtime environment.
+  Return a database url used for connecting to a replica database. Changes the
+  port to target a replica instance that is assumed to be available.
   """
-  @spec database_url :: nil | String.t()
-  def database_url do
-    data = %{
-      primary: Fly.primary_region(),
-      current: Fly.my_region(),
-      primary_url: primary_db_url(),
-      replica_url: replica_db_url()
-    }
-
-    do_database_url(data)
-  end
-
-  defp do_database_url(%{primary: pri, current: curr} = data) when pri == curr do
-    Logger.info("Primary DB connection - Running in primary region")
-    data.primary_url
-  end
-
-  defp do_database_url(%{} = data) do
-    Logger.info("Replica DB connection - Using replica")
-    data.replica_url
+  @spec replica_db_url(url :: String.t()) :: String.t()
+  def replica_db_url(url) do
+    # Infer the replica URL. Change the port to target a replica instance.
+    uri = URI.parse(url)
+    replica_uri = %URI{uri | port: 5433}
+    URI.to_string(replica_uri)
   end
 
   @doc """
