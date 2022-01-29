@@ -16,7 +16,7 @@ by adding `fly_postgres` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:fly_postgres, "~> 0.1.0"}
+    {:fly_postgres, "~> 0.2.0"}
   ]
 end
 ```
@@ -80,7 +80,7 @@ directly on the local replica. Other modifying functions like `insert`,
 calls to a node in your Elixir cluster running in the primary region. That
 ability is provided by the `fly_rpc` library.
 
-#TODO: I dont' this this is true anymore! Should just work. Need to test it
+#TODO: I don't think this is true anymore! Should just work. Need to test it
 ### Releases and Migrations
 
 Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you _may_ need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
@@ -161,11 +161,45 @@ defmodule MyApp.Application do
 end
 ```
 
+#TODO: Change to use `top1.nearest.of.<db>.internal` for the region URL
+
+#TODO: IF YOU HAVE MULTIPLE REPOS EXAMPLE
+
 The following changes were made:
 
 - Added the `Fly.RPC` GenServer
 - Start your Repo
 - Added `Fly.Postgres.LSN.Tracker` telling it which Repo to use.
+
+### Multiple Ecto.Repos?
+
+If you have multiple `Ecto.Repo`s setup in your application, you can still use `Fly.Postgres`. You will need an LSN Tracker for each repository that you want to work with.
+
+In your application file, it would be similar to this:
+
+```elixir
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    # ...
+
+    children = [
+      # Start the RPC server
+      {Fly.RPC, []},
+      # Start Ecto repositories
+      MyApp.Repo.Local_1,
+      MyApp.Repo.Local_2,
+      # Start the tracker after your DBs and name them.
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local_1, name: :repo_tracker_1},
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local_2, name: :repo_tracker_2},
+      #...
+    ]
+
+    # ...
+  end
+end
+```
 
 ## Usage
 

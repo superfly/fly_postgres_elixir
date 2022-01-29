@@ -19,66 +19,74 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
     server =
       Tracker.start_link(
-        name: :test_tracker,
+        tracker_name: :test_tracker,
         lsn_table_name: @test_lsn_table,
         requests_table_name: @test_requests,
         repo: FakeRepo
       )
+
+    state = %{lsn_table: @test_lsn_table, tracker_name: :test_tracker}
 
     # sleep for a few ms before running tests. Lets the server get started and create
     # the ETS table. Otherwise some race conditions exist where a test may run
     # before the ETS table is created.
     Process.sleep(50)
 
-    %{server: server, insert_lsn: insert_lsn, replay_lsn: replay_lsn}
+    %{server: server, insert_lsn: insert_lsn, replay_lsn: replay_lsn, state: state}
   end
 
   describe "initial query" do
-    test "starting new LSN.Tracker queries for initial replay LSN" do
-      %LSN{} = result = Tracker.get_last_replay(@test_lsn_table)
+    test "starting new LSN.Tracker queries for initial replay LSN", %{state: state} do
+      %LSN{} = result = Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
       assert result.source == :replay
       assert result.fpart == 0
       assert result.offset == 1
     end
   end
 
+  describe "get_repo/1" do
+    test "returns the repo module used by the tracker", %{state: state} do
+      assert FakeRepo == Tracker.get_repo(tracker: state.tracker_name, override_table_name: state.lsn_table)
+    end
+  end
+
   describe "get_last_replay/1" do
-    test "returns initial queries replay value", %{replay_lsn: replay_lsn} do
-      assert replay_lsn == Tracker.get_last_replay(@test_lsn_table)
+    test "returns initial queries replay value", %{replay_lsn: replay_lsn, state: state} do
+      assert replay_lsn == Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
     end
 
-    test "returns the stored LSN when found" do
+    test "returns the stored LSN when found", %{state: state} do
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, @test_lsn_table)
-      assert replay == Tracker.get_last_replay(@test_lsn_table)
+      Tracker.put_lsn(replay, state)
+      assert replay == Tracker.get_last_replay(override_table_name: state.lsn_table, tracker: state.tracker_name)
     end
   end
 
   describe "replicated?/2" do
-    test "returns true when the replay entry is in the cache" do
+    test "returns true when the replay entry is in the cache", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, @test_lsn_table)
-      assert true == Tracker.replicated?(@test_lsn_table, lsn)
+      Tracker.put_lsn(replay, state)
+      assert true == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
     end
 
-    test "returns false when the replay entry is not present" do
+    test "returns false when the replay entry is not present", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
-      assert false == Tracker.replicated?(@test_lsn_table, lsn)
+      assert false == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
     end
 
-    test "returns false when a matching entry is not YET present" do
+    test "returns false when a matching entry is not YET present", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 200_000_000, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, @test_lsn_table)
-      assert false == Tracker.replicated?(@test_lsn_table, lsn)
+      Tracker.put_lsn(replay, state)
+      assert false == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
     end
   end
 
   describe "request_notification/2" do
     test "writes request to ETS table" do
       lsn = %LSN{source: :insert}
-      assert :ok == Tracker.request_notification(@test_requests, lsn)
+      assert :ok == Tracker.request_notification(lsn, override_table_name: @test_requests)
       entries = :ets.match_object(@test_requests, {:"$1", :"$2"})
       [{pid, tracked_lsn}] = entries
       assert pid == self()
@@ -104,6 +112,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
   describe "process_request_entries/1" do
     setup do
       %{
+        tracker_name: Tracker,
         lsn_table: @test_lsn_table,
         requests_table: @test_requests,
         repo: FakeRepo
@@ -118,7 +127,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
     test "when a request is registered but it isn't replicated, nothing sent", state do
       insert = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
-      Tracker.request_notification(@test_requests, insert)
+      Tracker.request_notification(insert, override_table_name: @test_requests)
       assert :ok == Tracker.process_request_entries(state)
       refute_received {:lsn_replicated, _any}
       # Should still have ETS entry for request
@@ -128,7 +137,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
     test "when a request is registered and is replicated, receive notification", state do
       insert = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.request_notification(@test_requests, insert)
+      Tracker.request_notification(insert, override_table_name: @test_requests)
       FakeRepo.set_replay_lsn(replay)
 
       assert :ok == Tracker.process_request_entries(state)
@@ -151,7 +160,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       initial_replay_count = FakeRepo.query_replay_count()
       insert = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       # test process subscribes
-      Tracker.request_notification(@test_requests, insert)
+      Tracker.request_notification(insert, override_table_name: @test_requests)
       # sleep to wait and verify that queries are made
       Process.sleep(350)
       assert FakeRepo.query_replay_count() > initial_replay_count
@@ -161,7 +170,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       initial_replay_count = FakeRepo.query_replay_count()
       insert = %LSN{fpart: 0, offset: 100_700_300, source: :insert}
       # test process subscribes
-      Tracker.request_notification(@test_requests, insert)
+      Tracker.request_notification(insert, override_table_name: @test_requests)
 
       # Next query returns that it replicated
       FakeRepo.set_replay_lsn(%Fly.Postgres.LSN{fpart: 0, offset: 100_700_300, source: :replay})
@@ -175,6 +184,13 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
       # Verify polling happened
       assert FakeRepo.query_replay_count() > initial_replay_count
+    end
+  end
+
+  describe "tracker_table_name/2" do
+    test "returns combined atom" do
+      expected = :"test_lsn_requests_Elixir.Fly.Postgres.LSN.Tracker"
+      assert expected == Tracker.tracker_table_name(@test_requests, Tracker)
     end
   end
 end
