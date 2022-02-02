@@ -86,7 +86,7 @@ After changing your repo name, generating migrations can end up in the wrong pla
 
 You can override the inferred location in your config:
 
-```
+```elixir
 config :my_app, MyApp.Repo.Local,
   priv: "priv/repo"
 ```
@@ -240,7 +240,7 @@ MyApp.Repo.delete(item, await: false)
 
 When business logic code makes a number of changes or does some back and forth
 with the database, the "Automatic Usage" will be too slow. An example is looping
-though a list and performing a database insert on each iteration. Waiting for
+through a list and performing a database insert on each iteration. Waiting for
 the insert to complete and be locally replicated before performing the next
 iteration could be very slow.
 
