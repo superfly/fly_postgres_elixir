@@ -150,7 +150,7 @@ defmodule Fly.Postgres.LSN.Tracker do
       #
       # NOTE: This does add a slight delay to RPC calls using LSN. Waits for the
       # GenServer to run the check for the DB.
-      if replicated?(lsn) do
+      if replicated?(lsn, opts) do
         :ready
       else
         verbose_log(:info, fn ->
