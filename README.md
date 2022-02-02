@@ -80,29 +80,22 @@ directly on the local replica. Other modifying functions like `insert`,
 calls to a node in your Elixir cluster running in the primary region. That
 ability is provided by the `fly_rpc` library.
 
-#TODO: I don't think this is true anymore! Should just work. Need to test it
-### Releases and Migrations
+### Migration Files
 
-Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you _may_ need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
+After changing your repo name, generating migrations can end up in the wrong place, or at least not where you want them.
 
-The `load_app` function can be changed like this:
+You can override the inferred location in your config:
 
-```elixir
-  defp load_app do
-    Application.load(:fly_postgres)
-    Application.load(@app)
-  end
 ```
-
-Once the configuration is loaded, the database migrations can be run as
-expected. Without this step, your deployment will fail when running migrations
-because the database connection settings will be wrong.
+config :my_app, MyApp.Repo.Local,
+  priv: "priv/repo"
+```
 
 ### Repo References
 
-The goal with using this repo wrapper, is to leave all of your application code
-and business logic unchanged. However, there are a few places that need to be
-updated to make it work smoothly.
+The goal with using this repo wrapper, is to leave the majority of your
+application code and business logic unchanged. However, there are a few places
+that need to be updated to make it work smoothly.
 
 The following examples are places in your project code that need reference your
 actual `Ecto.Repo`. Following the above example, it should point to
@@ -162,8 +155,6 @@ end
 ```
 
 #TODO: Change to use `top1.nearest.of.<db>.internal` for the region URL
-
-#TODO: IF YOU HAVE MULTIPLE REPOS EXAMPLE
 
 The following changes were made:
 
