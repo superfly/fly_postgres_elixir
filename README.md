@@ -16,7 +16,7 @@ by adding `fly_postgres` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:fly_postgres, "~> 0.1.0"}
+    {:fly_postgres, "~> 0.2.0"}
   ]
 end
 ```
@@ -51,7 +51,7 @@ defmodule MyApp.Repo.Local do
 
   # Dynamically configure the database url based on runtime environment.
   def init(_type, config) do
-    {:ok, Keyword.put(config, :url, Fly.Postgres.database_url())}
+    Fly.Postgres.config_repo_url(config)
   end
 end
 
@@ -70,8 +70,9 @@ The other change was to add the `init` function to your `Ecto.Repo`. This
 dynamically configures your `Ecto.Repo` to connect to the **primary** (writable)
 database when your application is running in the primary region. When your
 application is **not** in the primary region, it is configured to connect to the
-local read-only replica. The replica is like a fast local cache of all your
-data. This means you `Ecto.Repo` is configured to talk to it's "local" database.
+nearest read-only replica. The replica is like a fast local cache of all your
+data. The `.Local` idea is that your `Ecto.Repo` is configured to talk to it's
+physically "local" database.
 
 The `Fly.Repo` performs all **read** operations like `all`, `one`, and `get_by`
 directly on the local replica. Other modifying functions like `insert`,
@@ -79,56 +80,22 @@ directly on the local replica. Other modifying functions like `insert`,
 calls to a node in your Elixir cluster running in the primary region. That
 ability is provided by the `fly_rpc` library.
 
-### Config Files
+### Migration Files
 
-In your `config/config.exs`, add something like the following:
+After changing your repo name, generating migrations can end up in the wrong place, or at least not where you want them.
 
-```elixir
-# Configure database repository
-config :fly_postgres, :local_repo, MyApp.Repo.Local
+You can override the inferred location in your config:
+
 ```
-
-This helps the library to know which repo to use when talking to the database to
-ensure the needed replications have completed.
-
-### Production Config
-
-In either `config/prod.exs` or `config/runtime.exs`, instruct the library to
-rewrite the `DATABASE_URL` used when connecting to the database. This takes into
-account which region is your primary region and attempts to connect to the
-primary or the replica accordingly.
-
-```elixir
-# Instruct Fly.Postgres to operate in "prod" mode and do DB URL rewrites
-config :fly_postgres, :rewrite_db_url, true
+config :my_app, MyApp.Repo.Local,
+  priv: "priv/repo"
 ```
-
-Without this setting, the database URL will not be used. This works great for `dev` and `test` environments which don't expect or depend on a `DATABASE_URL` ENV setting.
-
-If this is missing in production, it results in database connection failure.
-
-### Releases and Migrations
-
-Assuming you are using a custom "Release" module like [this one in the HelloElixir](https://github.com/fly-apps/hello_elixir/blob/main/lib/hello_elixir/release.ex) demo project to execute your migrations in a special release task, then you _may_ need to explicitly load the `:fly_postgres` config so it will be available to connect to the database.
-
-The `load_app` function can be changed like this:
-
-```elixir
-  defp load_app do
-    Application.load(:fly_postgres)
-    Application.load(@app)
-  end
-```
-
-Once the configuration is loaded, the database migrations can be run as
-expected. Without this step, your deployment will fail when running migrations
-because the database connection settings will be wrong.
 
 ### Repo References
 
-The goal with using this repo wrapper, is to leave all of your application code
-and business logic unchanged. However, there are a few places that need to be
-updated to make it work smoothly.
+The goal with using this repo wrapper, is to leave the majority of your
+application code and business logic unchanged. However, there are a few places
+that need to be updated to make it work smoothly.
 
 The following examples are places in your project code that need reference your
 actual `Ecto.Repo`. Following the above example, it should point to
@@ -148,7 +115,7 @@ With these project plumbing changes, you application code can stay largely untou
 If your application is deployed to multiple Fly.io regions, the instances (or
 nodes) must be clustered together.
 
-Through ENV configuration, you can to tell the app which region is the "primary" region.
+Through ENV configuration, you tell the app which region is the "primary" region.
 
 `fly.toml`
 
@@ -178,7 +145,7 @@ defmodule MyApp.Application do
       # Start the Ecto repository
       MyApp.Repo.Local,
       # Start the tracker after your DB.
-      {Fly.Postgres.LSN.Tracker, []},
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local},
       #...
     ]
 
@@ -191,7 +158,37 @@ The following changes were made:
 
 - Added the `Fly.RPC` GenServer
 - Start your Repo
-- Added `Fly.Postgres.LSN.Tracker`
+- Added `Fly.Postgres.LSN.Tracker` telling it which Repo to use.
+
+### Multiple Ecto.Repos?
+
+If you have multiple `Ecto.Repo`s setup in your application, you can still use `Fly.Postgres`. You will need an LSN Tracker for each repository that you want to work with.
+
+In your application file, it would be similar to this:
+
+```elixir
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    # ...
+
+    children = [
+      # Start the RPC server
+      {Fly.RPC, []},
+      # Start Ecto repositories
+      MyApp.Repo.Local_1,
+      MyApp.Repo.Local_2,
+      # Start the tracker after your DBs and name them.
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local_1, name: :repo_tracker_1},
+      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local_2, name: :repo_tracker_2},
+      #...
+    ]
+
+    # ...
+  end
+end
+```
 
 ## Usage
 

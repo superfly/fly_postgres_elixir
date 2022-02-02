@@ -332,7 +332,7 @@ defmodule Fly.Repo do
         # Default behavior is to wait for replication. If `:await` is set to
         # false/falsey then skip the LSN query and waiting for replication.
         if Keyword.get(opts, :await, true) do
-          Fly.Postgres.rpc_and_wait(@local_repo, func, args, timeout: @timeout)
+          Fly.Postgres.rpc_and_wait(@local_repo, func, args, rpc_timeout: @timeout)
         else
           Fly.rpc_primary(@local_repo, func, args, timeout: @timeout)
         end

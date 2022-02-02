@@ -24,16 +24,50 @@ defmodule Fly.Postgres.LSN.Tracker do
   Start the Tracker that receives work requests.
   """
   def start_link(opts \\ []) do
+    if !Keyword.has_key?(opts, :repo) do
+      raise ArgumentError, ":repo must be given when starting the LSN Tracker"
+    end
     name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, Keyword.put(opts, :name, name), name: name)
+  end
+
+  @doc """
+  Get the `Ecto.Repo` used by the tracker.
+
+  ## Options
+
+  - `:tracker` - The tracker name to get the latest LSN replay value for. Uses
+    the default tracker name. Needs to be provided when multiple trackers are
+    used.
+  """
+  @spec get_repo(opts :: keyword()) :: nil | module()
+  def get_repo(opts \\ []) do
+    table_name = get_table_name(@lsn_table, opts)
+
+    case :ets.lookup(table_name, :repo) do
+      [{:repo, repo}] ->
+        repo
+
+      [] ->
+        nil
+    end
   end
 
   @doc """
   Get the latest cached LSN replay value.
+
+  ## Options
+
+  - `:tracker` - The tracker name to get the latest LSN replay value for. Uses
+    the default tracker name. Needs to be provided when multiple trackers are
+    used.
   """
-  @spec get_last_replay(tab :: atom()) :: nil | Fly.Postgres.LSN.t()
-  def get_last_replay(tab \\ @lsn_table) do
-    case :ets.lookup(tab, :last_log_replay) do
+  @spec get_last_replay(opts :: keyword()) :: nil | Fly.Postgres.LSN.t()
+  def get_last_replay(opts \\ []) do
+    # Option for testing: `:override_table_name` - The ETS table name to read the values from.
+    table_name = get_table_name(@lsn_table, opts)
+
+    case :ets.lookup(table_name, :last_log_replay) do
       [{:last_log_replay, %Fly.Postgres.LSN{} = stored}] ->
         stored
 
@@ -45,8 +79,9 @@ defmodule Fly.Postgres.LSN.Tracker do
   @doc """
   Return if the LSN value was replicated.
   """
-  def replicated?(tab \\ @lsn_table, %Fly.Postgres.LSN{source: :insert} = lsn) do
-    case get_last_replay(tab) do
+  @spec replicated?(Fly.Postgres.LSN.t(), opts :: keyword()) :: boolean()
+  def replicated?(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
+    case get_last_replay(opts) do
       %Fly.Postgres.LSN{} = stored ->
         Fly.Postgres.LSN.replicated?(stored, lsn)
 
@@ -60,10 +95,12 @@ defmodule Fly.Postgres.LSN.Tracker do
   process cares about. This allows a process to block and await their data to be
   replicated and be notified as soon as it's detected.
   """
-  @spec request_notification(tab :: atom(), Fly.Postgres.LSN.t()) :: :ok
-  def request_notification(tab \\ @request_tab, %Fly.Postgres.LSN{source: :insert} = lsn) do
+  @spec request_notification(Fly.Postgres.LSN.t(), opts :: keyword()) :: :ok
+  def request_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
+    table_name = get_table_name(@request_tab, opts)
+
     # This uses the pid of the requesting process
-    :ets.insert(tab, {self(), lsn})
+    :ets.insert(table_name, {self(), lsn})
     :ok
   end
 
@@ -71,10 +108,15 @@ defmodule Fly.Postgres.LSN.Tracker do
   Blocking function that waits for a `request_notification/2` response message
   to be received. The timeout defaults to 5s after which time it stops waiting
   and returns an `{:error, :timeout}` response.
+
+  ## Options
+
+  - `:replication_timeout` - Timeout duration to wait for replication to complete.
   """
-  @spec await_notification(Fly.Postgres.LSN.t(), timeout :: integer) ::
+  @spec await_notification(Fly.Postgres.LSN.t(), opts :: keyword()) ::
           :ready | {:error, :timeout}
-  def await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, timeout \\ 5_000) do
+  def await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
+    timeout = Keyword.get(opts, :replication_timeout, 5_000)
     pid = self()
 
     receive do
@@ -89,10 +131,16 @@ defmodule Fly.Postgres.LSN.Tracker do
   Request to be notified when the desired level of data replication has
   completed and wait for it to complete. Optionally it may timeout if it takes
   too long.
+
+  ## Options
+
+  - `:tracker` - The name of the tracker to wait on for replication tracking.
+  - `:replication_timeout` - Timeout duration to wait for replication to complete.
   """
-  @spec request_and_await_notification(Fly.Postgres.LSN.t(), timeout :: integer) ::
+  @spec request_and_await_notification(Fly.Postgres.LSN.t(), opts :: keyword()) ::
           :ready | {:error, :timeout}
-  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, timeout \\ 5_000) do
+
+  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
     # Don't register notification request or wait when on the primary
     if Fly.is_primary?() do
       :ready
@@ -109,8 +157,8 @@ defmodule Fly.Postgres.LSN.Tracker do
           "LSN REQ notification for #{inspect(lsn)}"
         end)
 
-        request_notification(lsn)
-        result = await_notification(lsn, timeout)
+        request_notification(lsn, opts)
+        result = await_notification(lsn, opts)
 
         verbose_log(:info, fn ->
           case result do
@@ -138,26 +186,40 @@ defmodule Fly.Postgres.LSN.Tracker do
   ###
 
   def init(opts) do
-    lsn_table_name = Keyword.get(opts, :lsn_table_name, @lsn_table)
-    requests_table_name = Keyword.get(opts, :requests_table_name, @request_tab)
+    repo = Keyword.fetch!(opts, :repo)
+    # name of the tracker process
+    tracker_name = Keyword.fetch!(opts, :name)
+
+    # Start with the table names to use for this tracker according to the name of the process.
+    default_cache_table_name = tracker_table_name(@lsn_table, tracker_name)
+    default_request_table_name = tracker_table_name(@request_tab, tracker_name)
+
+    # Tests may override the name of the tables. Take override names if given.
+    # Otherwise fallback to the default generated names.
+    cache_table_name = Keyword.get(opts, :lsn_table_name, default_cache_table_name)
+    requests_table_name = Keyword.get(opts, :requests_table_name, default_request_table_name)
 
     # setup ETS table for caching most recently read DB LSN value
-    tab_lsn_cache = :ets.new(lsn_table_name, [:named_table, :public, read_concurrency: true])
+    tab_lsn_cache = :ets.new(cache_table_name, [:named_table, :public, read_concurrency: true])
+    # insert special entry for which repo this tracker is using
+    :ets.insert(cache_table_name, {:repo, repo})
     # setup ETS table for processes requesting notification when new matching LSN value is seen
     tab_requests = :ets.new(requests_table_name, [:named_table, :public, read_concurrency: true])
 
     # Initial state. Default to checking every 100msec.
     {:ok,
      %{
+       tracker_name: tracker_name,
        lsn_table: tab_lsn_cache,
        requests_table: tab_requests,
-       frequency: Keyword.get(opts, :frequency, 100)
+       frequency: Keyword.get(opts, :frequency, 100),
+       repo: repo
      }, {:continue, :initial_query}}
   end
 
   def handle_continue(:initial_query, state) do
     # perform the initial query to populate the ETS table
-    query_last_replay(state.lsn_table)
+    query_last_replay(state)
 
     # schedule the first check which triggers the ongoing checks
     send(self(), :run_process_notification_requests)
@@ -174,17 +236,17 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   # Query for the last replicated log sequence number and write it to the ETS
   # table.
-  defp query_last_replay(lsn_table) do
-    Fly.Postgres.local_repo()
+  defp query_last_replay(%{repo: repo} = state) do
+    repo
     |> Fly.Postgres.LSN.last_wal_replay()
-    |> put_lsn(lsn_table)
+    |> put_lsn(state)
   end
 
   @doc false
   # Private function that inserts the most recently seen log replay value into
   # an ETS cache for concurrent read access.
-  def put_lsn(%Fly.Postgres.LSN{} = lsn, lsn_table_name) do
-    :ets.insert(lsn_table_name, {:last_log_replay, lsn})
+  def put_lsn(%Fly.Postgres.LSN{} = lsn, %{lsn_table: lsn_table} = _state) do
+    :ets.insert(lsn_table, {:last_log_replay, lsn})
     lsn
   end
 
@@ -193,7 +255,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   # the entry.
   @doc false
   # Private function
-  def process_request_entries(%{requests_table: requests_table, lsn_table: lsn_table}) do
+  def process_request_entries(%{requests_table: requests_table} = state) do
     case fetch_request_entries(requests_table) do
       [] ->
         # Nothing to do. No outstanding requests being tracked
@@ -201,7 +263,7 @@ defmodule Fly.Postgres.LSN.Tracker do
 
       requests ->
         # We have requests to process. Query for the latest replication LSN
-        last_replay = query_last_replay(lsn_table)
+        last_replay = query_last_replay(state)
         # Cycle and notify if replicated
         Enum.each(requests, fn {pid, lsn_insert} = entry ->
           # If the tracked LSN was already replicated, notify the pid and remove the
@@ -222,5 +284,20 @@ defmodule Fly.Postgres.LSN.Tracker do
   # Private function
   def fetch_request_entries(requests_table \\ @request_tab) do
     :ets.match_object(requests_table, {:"$1", :"$2"})
+  end
+
+  # Get the ETS cache tracker table name. Derrived from the tracker config
+  # becomes easy. Each instance of the tracker has it it's own set of tables.
+  @doc false
+  # Private function
+  def tracker_table_name(base_table_name, tracker_name) when is_atom(tracker_name) do
+    # NOTE: This intetionally creates an atom. The input values come from
+    # developer code, not user input.
+    String.to_atom(Atom.to_string(base_table_name) <> "_" <> Atom.to_string(tracker_name))
+  end
+
+  def get_table_name(base_table_name, opts \\ []) do
+    tracker_name = Keyword.get(opts, :tracker) || __MODULE__
+    Keyword.get_lazy(opts, :override_table_name, fn -> tracker_table_name(base_table_name, tracker_name) end)
   end
 end
