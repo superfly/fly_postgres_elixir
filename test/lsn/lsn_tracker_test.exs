@@ -100,12 +100,12 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       # send the message before starting to ensure it's there since the await
       # call will block
       send(self(), {:lsn_replicated, {self(), lsn}})
-      assert :ready == Tracker.await_notification(lsn, 10)
+      assert :ready == Tracker.await_notification(lsn, timeout: 10)
     end
 
     test "returns `{:error, :timeout}` when timeout reached" do
       lsn = %LSN{source: :insert}
-      assert {:error, :timeout} == Tracker.await_notification(lsn, 1)
+      assert {:error, :timeout} == Tracker.await_notification(lsn, timeout: 1)
     end
   end
 

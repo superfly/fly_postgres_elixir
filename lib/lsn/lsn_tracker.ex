@@ -108,10 +108,15 @@ defmodule Fly.Postgres.LSN.Tracker do
   Blocking function that waits for a `request_notification/2` response message
   to be received. The timeout defaults to 5s after which time it stops waiting
   and returns an `{:error, :timeout}` response.
+
+  ## Options
+
+  - `:replication_timeout` - Timeout duration to wait for replication to complete.
   """
-  @spec await_notification(Fly.Postgres.LSN.t(), timeout :: integer) ::
+  @spec await_notification(Fly.Postgres.LSN.t(), opts :: keyword()) ::
           :ready | {:error, :timeout}
-  def await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, timeout \\ 5_000) do
+  def await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
+    timeout = Keyword.get(opts, :replication_timeout, 5_000)
     pid = self()
 
     receive do
@@ -126,12 +131,16 @@ defmodule Fly.Postgres.LSN.Tracker do
   Request to be notified when the desired level of data replication has
   completed and wait for it to complete. Optionally it may timeout if it takes
   too long.
+
+  ## Options
+
+  - `:tracker` - The name of the tracker to wait on for replication tracking.
+  - `:replication_timeout` - Timeout duration to wait for replication to complete.
   """
-  @spec request_and_await_notification(Fly.Postgres.LSN.t(), timeout :: integer) ::
+  @spec request_and_await_notification(Fly.Postgres.LSN.t(), opts :: keyword()) ::
           :ready | {:error, :timeout}
 
-          #TODO: need opts here for table request. Make timeout an option too?
-  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, timeout \\ 5_000) do
+  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
     # Don't register notification request or wait when on the primary
     if Fly.is_primary?() do
       :ready
@@ -148,8 +157,8 @@ defmodule Fly.Postgres.LSN.Tracker do
           "LSN REQ notification for #{inspect(lsn)}"
         end)
 
-        request_notification(lsn)
-        result = await_notification(lsn, timeout)
+        request_notification(lsn, opts)
+        result = await_notification(lsn, opts)
 
         verbose_log(:info, fn ->
           case result do
@@ -176,14 +185,11 @@ defmodule Fly.Postgres.LSN.Tracker do
   ### SERVER CALLBACKS
   ###
 
-  # TODO: THE ETS TABLE NAMES COLLIDE WHEN
-
   def init(opts) do
     repo = Keyword.fetch!(opts, :repo)
     # name of the tracker process
     tracker_name = Keyword.fetch!(opts, :name)
 
-    #TODO: THE TABLE NAMES... CAN BE NAMED BY TESTS
     # Start with the table names to use for this tracker according to the name of the process.
     default_cache_table_name = tracker_table_name(@lsn_table, tracker_name)
     default_request_table_name = tracker_table_name(@request_tab, tracker_name)
