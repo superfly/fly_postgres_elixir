@@ -37,7 +37,10 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
   describe "initial query" do
     test "starting new LSN.Tracker queries for initial replay LSN", %{state: state} do
-      %LSN{} = result = Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
+      %LSN{} =
+        result =
+        Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
+
       assert result.source == :replay
       assert result.fpart == 0
       assert result.offset == 1
@@ -46,19 +49,29 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
   describe "get_repo/1" do
     test "returns the repo module used by the tracker", %{state: state} do
-      assert FakeRepo == Tracker.get_repo(tracker: state.tracker_name, override_table_name: state.lsn_table)
+      assert FakeRepo ==
+               Tracker.get_repo(tracker: state.tracker_name, override_table_name: state.lsn_table)
     end
   end
 
   describe "get_last_replay/1" do
     test "returns initial queries replay value", %{replay_lsn: replay_lsn, state: state} do
-      assert replay_lsn == Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
+      assert replay_lsn ==
+               Tracker.get_last_replay(
+                 tracker: state.tracker_name,
+                 override_table_name: state.lsn_table
+               )
     end
 
     test "returns the stored LSN when found", %{state: state} do
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
       Tracker.put_lsn(replay, state)
-      assert replay == Tracker.get_last_replay(override_table_name: state.lsn_table, tracker: state.tracker_name)
+
+      assert replay ==
+               Tracker.get_last_replay(
+                 override_table_name: state.lsn_table,
+                 tracker: state.tracker_name
+               )
     end
   end
 
@@ -67,19 +80,34 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
       Tracker.put_lsn(replay, state)
-      assert true == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
+
+      assert true ==
+               Tracker.replicated?(lsn,
+                 override_table_name: state.lsn_table,
+                 tracker: state.tracker_name
+               )
     end
 
     test "returns false when the replay entry is not present", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
-      assert false == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
+
+      assert false ==
+               Tracker.replicated?(lsn,
+                 override_table_name: state.lsn_table,
+                 tracker: state.tracker_name
+               )
     end
 
     test "returns false when a matching entry is not YET present", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 200_000_000, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
       Tracker.put_lsn(replay, state)
-      assert false == Tracker.replicated?(lsn, override_table_name: state.lsn_table, tracker: state.tracker_name)
+
+      assert false ==
+               Tracker.replicated?(lsn,
+                 override_table_name: state.lsn_table,
+                 tracker: state.tracker_name
+               )
     end
   end
 

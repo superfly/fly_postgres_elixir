@@ -182,11 +182,15 @@ defmodule Fly.Repo do
       See `Ecto.Repo.insert_all/3` for full documentation.
       """
       def insert_all(schema_or_source, entries_or_query, opts \\ []) do
-        unquote(__MODULE__).__exec_on_primary__(:insert_all, [
-          schema_or_source,
-          entries_or_query,
+        unquote(__MODULE__).__exec_on_primary__(
+          :insert_all,
+          [
+            schema_or_source,
+            entries_or_query,
+            opts
+          ],
           opts
-        ], opts)
+        )
       end
 
       @doc """
