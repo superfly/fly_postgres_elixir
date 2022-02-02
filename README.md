@@ -154,8 +154,6 @@ defmodule MyApp.Application do
 end
 ```
 
-#TODO: Change to use `top1.nearest.of.<db>.internal` for the region URL
-
 The following changes were made:
 
 - Added the `Fly.RPC` GenServer
