@@ -54,6 +54,7 @@ defmodule Fly.Repo do
     quote bind_quoted: [opts: opts] do
       @local_repo Keyword.fetch!(opts, :local_repo)
       @timeout Keyword.get(opts, :timeout, 5_000)
+      @replication_timeout Keyword.get(opts, :replication_timeout, 5_000)
 
       # Here we are injecting as little as possible then calling out to the
       # library functions.
@@ -181,11 +182,15 @@ defmodule Fly.Repo do
       See `Ecto.Repo.insert_all/3` for full documentation.
       """
       def insert_all(schema_or_source, entries_or_query, opts \\ []) do
-        unquote(__MODULE__).__exec_on_primary__(:insert_all, [
-          schema_or_source,
-          entries_or_query,
+        unquote(__MODULE__).__exec_on_primary__(
+          :insert_all,
+          [
+            schema_or_source,
+            entries_or_query,
+            opts
+          ],
           opts
-        ], opts)
+        )
       end
 
       @doc """
@@ -332,7 +337,14 @@ defmodule Fly.Repo do
         # Default behavior is to wait for replication. If `:await` is set to
         # false/falsey then skip the LSN query and waiting for replication.
         if Keyword.get(opts, :await, true) do
-          Fly.Postgres.rpc_and_wait(@local_repo, func, args, rpc_timeout: @timeout)
+          rpc_timeout = Keyword.get(opts, :rpc_timeout, @timeout)
+          replication_timeout = Keyword.get(opts, :replication_timeout, @replication_timeout)
+
+          Fly.Postgres.rpc_and_wait(@local_repo, func, args,
+            rpc_timeout: rpc_timeout,
+            replication_timeout: replication_timeout,
+            tracker: Keyword.get(opts, :tracker)
+          )
         else
           Fly.rpc_primary(@local_repo, func, args, timeout: @timeout)
         end

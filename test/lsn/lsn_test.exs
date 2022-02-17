@@ -1,5 +1,6 @@
 defmodule Fly.Postgres.LSNTest do
-  use ExUnit.Case, async: false  # uses FakeRepo
+  # uses FakeRepo
+  use ExUnit.Case, async: false
 
   doctest Fly.Postgres.LSN
 
@@ -60,7 +61,7 @@ defmodule Fly.Postgres.LSNTest do
       FakeRepo.set_insert_lsn(%Fly.Postgres.LSN{fpart: 0, offset: 100_700_300, source: :insert})
       %LSN{source: :insert} = result = LSN.current_wal_insert(FakeRepo)
       assert result.fpart == 0
-      assert result.offset == 100700300
+      assert result.offset == 100_700_300
     end
   end
 
@@ -69,7 +70,7 @@ defmodule Fly.Postgres.LSNTest do
       FakeRepo.set_replay_lsn(%Fly.Postgres.LSN{fpart: 0, offset: 100_700_300, source: :replay})
       %LSN{source: :replay} = result = LSN.last_wal_replay(FakeRepo)
       assert result.fpart == 0
-      assert result.offset == 100700300
+      assert result.offset == 100_700_300
     end
   end
 end

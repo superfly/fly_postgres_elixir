@@ -27,6 +27,7 @@ defmodule Fly.Postgres.LSN.Tracker do
     if !Keyword.has_key?(opts, :repo) do
       raise ArgumentError, ":repo must be given when starting the LSN Tracker"
     end
+
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, Keyword.put(opts, :name, name), name: name)
   end
@@ -150,7 +151,7 @@ defmodule Fly.Postgres.LSN.Tracker do
       #
       # NOTE: This does add a slight delay to RPC calls using LSN. Waits for the
       # GenServer to run the check for the DB.
-      if replicated?(lsn) do
+      if replicated?(lsn, opts) do
         :ready
       else
         verbose_log(:info, fn ->
@@ -298,6 +299,9 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   def get_table_name(base_table_name, opts \\ []) do
     tracker_name = Keyword.get(opts, :tracker) || __MODULE__
-    Keyword.get_lazy(opts, :override_table_name, fn -> tracker_table_name(base_table_name, tracker_name) end)
+
+    Keyword.get_lazy(opts, :override_table_name, fn ->
+      tracker_table_name(base_table_name, tracker_name)
+    end)
   end
 end
