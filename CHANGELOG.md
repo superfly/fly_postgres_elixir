@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.1 (2022-02-02)
+
+- Improvement: Support passing `replication_timeout` config in more places.
+
+```elixir
+defmodule MyApp.Repo do
+  use Fly.Repo, local_repo: MyApp.Repo.Local, replication_timeout: 5_000
+end
+
+# or
+
+MyApp.Repo.insert(changeset, replication_timeout: 5_000)
+```
+
 ## v0.2.0 (2022-02-01)
 
 The jump to a 0.2 indicates a significant change in the configuration of the library. Please review the README under the Configuration section.
