@@ -60,6 +60,14 @@ defmodule Fly.Repo do
       # library functions.
 
       @doc """
+      See `Ecto.Repo.config/0` for full documentation.
+      """
+      @spec config() :: Keyword.t()
+      def config() do
+        @local_repo.config()
+      end
+
+      @doc """
       Calculate the given `aggregate`.
 
       See `Ecto.Repo.aggregate/3` for full documentation.
