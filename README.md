@@ -273,6 +273,22 @@ Fly.RPC.rpc_region(:primary, MyModule, :do_work, [arg1, arg2])
 
 This also works when modifying the database too.
 
+### Using Ecto Queries in Migrations
+
+If you are trying to run an Ecto Query in a Migration, it will fail when using `MyApp.Repo.insert(...)` or `MyApp.Repo.update(...)`.
+
+The solution is to explicitly use the local repo instead.
+
+`MyApp.Repo.Local.insert(...)` or `MyApp.Repo.Local.update(...)`
+
+**Explanation:**
+
+It doesn't work to use the repo wrapper because the Tracker started in your `MyApp.Application` hasn't been started. You application is not started because you can have GenServers that make queries and interact with the database. When running migrations, those parts of the application shouldn't be running because the very structure of the database can change.
+
+It is safe to use `MyApp.Repo.Local` because on Fly.io, migrations are run in the primary region that already has direct access to the writable database.
+
+In general, it is discouraged to use `.update(...)`, `.insert(...)`, and `.delete(...)` statements in migrations. For more information on why that presents problems and alternative options, check out [this section](https://fly.io/phoenix-files/backfilling-data/) of the [Safe Ecto Migrations](https://fly.io/phoenix-files/safe-ecto-migrations/) series.
+
 ## LSN Polling
 
 The library polls the local database for what point in the replication process
