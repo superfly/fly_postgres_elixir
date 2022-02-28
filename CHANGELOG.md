@@ -2,7 +2,7 @@
 
 ## v0.2.2 (2022-02-28)
 
-- Improvement: The repo wraps a few more functions that are needed for the Oban library to work smoothly.
+- Improvement: The repo wraps a few more functions that are needed for the Oban library to work smoothly. Contribution by @sorentwo in https://github.com/superfly/fly_postgres_elixir/pull/22
 
 ## v0.2.1 (2022-02-02)
 
