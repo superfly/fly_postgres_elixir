@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.2 (2022-02-28)
+
+- Improvement: The repo wraps a few more functions that are needed for the Oban library to work smoothly.
+
 ## v0.2.1 (2022-02-02)
 
 - Improvement: Support passing `replication_timeout` config in more places.
