@@ -60,6 +60,14 @@ defmodule Fly.Repo do
       # library functions.
 
       @doc """
+      See `Ecto.Repo.config/0` for full documentation.
+      """
+      @spec config() :: Keyword.t()
+      def config do
+        @local_repo.config()
+      end
+
+      @doc """
       Calculate the given `aggregate`.
 
       See `Ecto.Repo.aggregate/3` for full documentation.
@@ -159,6 +167,16 @@ defmodule Fly.Repo do
       end
 
       @doc """
+      Returns the atom name or pid of the current repository.
+
+      See `Ecto.Repo.get_dynamic_repo/0` for full documentation.
+      """
+      @spec get_dynamic_repo() :: Keyword.t()
+      def get_dynamic_repo do
+        @local_repo.get_dynamic_repo()
+      end
+
+      @doc """
       Inserts a struct defined via Ecto.Schema or a changeset.
 
       See `Ecto.Repo.insert/2` for full documentation.
@@ -249,6 +267,33 @@ defmodule Fly.Repo do
       """
       def prepare_query(operation, query, opts \\ []) do
         unquote(__MODULE__).__exec_local__(:prepare_query, [operation, query, opts])
+      end
+
+      @doc """
+      Sets the dynamic repository to be used in further interactions.
+
+      See `Ecto.Repo.put_dynamic_repo/1` for full documentation.
+      """
+      def put_dynamic_repo(name_or_pid) do
+        unquote(__MODULE__).__exec_local__(:put_dynamic_repo, [name_or_pid])
+      end
+
+      @doc """
+      The same as `query`, but raises on invalid queries.
+
+      See `Ecto.Adapters.SQL.query/4` for full documentation.
+      """
+      def query(query, params \\ [], opts \\ []) do
+        unquote(__MODULE__).__exec_local__(:query, [query, params, opts])
+      end
+
+      @doc """
+      Run a custom SQL query.
+
+      See `Ecto.Adapters.SQL.query!/4` for full documentation.
+      """
+      def query!(query, params \\ [], opts \\ []) do
+        unquote(__MODULE__).__exec_local__(:query!, [query, params, opts])
       end
 
       @doc """
