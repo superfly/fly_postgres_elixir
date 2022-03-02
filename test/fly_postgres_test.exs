@@ -4,7 +4,7 @@ defmodule Fly.PostgresTest do
 
   doctest Fly.Postgres
 
-  @url_dns "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"
+  @url_dns "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
   @url_base "postgres://some-user:some-pass@my-app-db.internal:5432/some_app"
 
   setup do
@@ -24,13 +24,13 @@ defmodule Fly.PostgresTest do
       config = [stuff: "THINGS", url: @url_base]
       System.put_env([{"FLY_REGION", "xyz"}, {"DATABASE_URL", @url_base}])
       config = Fly.Postgres.rewrite_database_url(config)
-      assert Keyword.get(config, :url) |> String.contains?("top2.nearest.of.")
+      assert Keyword.get(config, :url) |> String.contains?("top1.nearest.of.")
     end
 
     test "changes port when not in primary region" do
       config = [stuff: "THINGS", url: System.get_env("DATABASE_URL")]
       # NOTE: Only the port number changed
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5433/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5433/some_app"
       updated = Fly.Postgres.rewrite_database_url(config)
       assert expected == Keyword.get(updated, :url)
       # other things are altered
@@ -40,7 +40,7 @@ defmodule Fly.PostgresTest do
     test "changes port and adds DNS helpers if missing when not in primary region" do
       config = [stuff: "THINGS", url: @url_base]
       # NOTE: Port number changed and DNS parts added to host
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5433/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5433/some_app"
       updated = Fly.Postgres.rewrite_database_url(config)
       assert Keyword.get(updated, :url) == expected
     end
@@ -49,15 +49,23 @@ defmodule Fly.PostgresTest do
   describe "rewrite_host/1" do
     test "adds dns helpers if missing from host" do
       config = [stuff: "THINGS", url: @url_base]
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
       updated = Fly.Postgres.rewrite_host(config)
       assert Keyword.get(updated, :url) == expected
     end
 
-    test "returns unmodified if dns helpers detected" do
-      config = [stuff: "THINGS", url: @url_dns]
+    test "returns unmodified if dns top1 helper detected" do
+      no_change = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
+      config = [stuff: "THINGS", url: no_change]
       updated = Fly.Postgres.rewrite_host(config)
-      assert Keyword.get(updated, :url) == @url_dns
+      assert Keyword.get(updated, :url) == no_change
+    end
+
+    test "changes to top1 if top2 is detected" do
+      config = [stuff: "THINGS", url: "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"]
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
+      updated = Fly.Postgres.rewrite_host(config)
+      assert Keyword.get(updated, :url) == expected
     end
   end
 
@@ -77,7 +85,7 @@ defmodule Fly.PostgresTest do
       config = [stuff: "THINGS", url: @url_dns]
       updated = Fly.Postgres.rewrite_replica_port(config)
       # NOTE: Port number should change
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5433/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5433/some_app"
       assert Keyword.get(updated, :url) == expected
       assert @url_dns != expected
     end
@@ -93,7 +101,7 @@ defmodule Fly.PostgresTest do
       System.put_env([{"FLY_REGION", "xyz"}])
       config = [stuff: "THINGS", url: @url_base]
       # NOTE: Only the port number changed
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5432/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
       {:ok, updated} = Fly.Postgres.config_repo_url(config)
       assert expected == Keyword.get(updated, :url)
     end
@@ -101,7 +109,7 @@ defmodule Fly.PostgresTest do
     test "update url for replica PORT when given" do
       config = [stuff: "THINGS", url: System.get_env("DATABASE_URL")]
       # NOTE: Only the port number changed
-      expected = "postgres://some-user:some-pass@top2.nearest.of.my-app-db.internal:5433/some_app"
+      expected = "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5433/some_app"
       {:ok, updated} = Fly.Postgres.config_repo_url(config)
       assert expected == Keyword.get(updated, :url)
     end

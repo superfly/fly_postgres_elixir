@@ -32,7 +32,7 @@ defmodule Fly.Postgres do
   end
 
   @doc """
-  Rewrite the `:url` value to include DNS helpers of "top2.nearest.of" to find
+  Rewrite the `:url` value to include DNS helpers of "top1.nearest.of" to find
   the closes database to target. If the host already contains that, leave it
   unchanged. If it is missing, add it and return the updated the url in the
   config.
@@ -42,13 +42,20 @@ defmodule Fly.Postgres do
     uri = URI.parse(Keyword.get(config, :url))
 
     # if detected DNS helpers in the URI, return unchanged
-    if String.contains?(uri.host, ".nearest.of.") do
-      config
-    else
-      # Not detected. Add them to the Host and return new config with replaced
-      # host that includes DNS helpers
-      updated_uri = %URI{uri | host: "top2.nearest.of.#{uri.host}"} |> URI.to_string()
-      Keyword.put(config, :url, updated_uri)
+    cond do
+      String.contains?(uri.host, "top1.nearest.of.") ->
+        config
+
+      String.contains?(uri.host, "top2.nearest.of.") ->
+        new_host = String.replace(uri.host, "top2.nearest.of.", "top1.nearest.of.", global: false)
+        updated_uri = %URI{uri | host: new_host} |> URI.to_string()
+        Keyword.put(config, :url, updated_uri)
+
+      true ->
+        # Not detected. Add them to the Host and return new config with replaced
+        # host that includes DNS helpers
+        updated_uri = %URI{uri | host: "top1.nearest.of.#{uri.host}"} |> URI.to_string()
+        Keyword.put(config, :url, updated_uri)
     end
   end
 
