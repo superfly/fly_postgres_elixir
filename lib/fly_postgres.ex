@@ -6,36 +6,48 @@ defmodule Fly.Postgres do
   """
   require Logger
 
-  @spec config_repo_url(config :: keyword()) :: {:ok, keyword()}
-  def config_repo_url(config) do
-    # If the config contains a database URL, we'll use that to potentially
-    # re-write to hit the replica if in a replica region.
-    case Keyword.fetch(config, :url) do
-      {:ok, _url} ->
-        {:ok, rewrite_database_url(config)}
+  # Compile time setting for the build environment used.
+  @env Mix.env()
 
-      :error ->
-        # :url key not found. Likely local dev/testing. Return unchanged.
-        {:ok, config}
-    end
+  @doc """
+  Rewrite the database config based on the runtime environment.
+
+  This does not make changes when running a dev or test build.
+  """
+  @spec config_repo_url(config :: keyword()) :: {:ok, keyword()}
+  def config_repo_url(config, env \\ @env)
+
+  def config_repo_url(config, :prod) do
+    # perform the rewrite when in production environment
+    {:ok, rewrite_database_url!(config)}
+  end
+
+  def config_repo_url(config, _env) do
+    # pass through the config unmodified (dev/test)
+    {:ok, config}
   end
 
   @doc """
   Compute the database url to use for this app given the current configuration
   and runtime environment.
   """
-  @spec rewrite_database_url(config :: keyword()) :: keyword()
-  def rewrite_database_url(config) do
-    config
-    |> rewrite_host()
-    |> rewrite_replica_port()
+  @spec rewrite_database_url!(config :: keyword()) :: keyword() | no_return()
+  def rewrite_database_url!(config) do
+    # asserting that the config has a url
+    if Keyword.has_key?(config, :url) do
+      config
+      |> rewrite_host()
+      |> rewrite_replica_port()
+    else
+      raise ArgumentError, "Unable to rewrite database url in fly_postgres. No url was specified."
+    end
   end
 
   @doc """
   Rewrite the `:url` value to include DNS helpers of "top1.nearest.of" to find
   the closes database to target. If the host already contains that, leave it
   unchanged. If it is missing, add it and return the updated the url in the
-  config.
+  config. Raise an exception if the no URL set in the config.
   """
   @spec rewrite_host(config :: keyword()) :: keyword()
   def rewrite_host(config) do
@@ -43,17 +55,18 @@ defmodule Fly.Postgres do
 
     # if detected DNS helpers in the URI, return unchanged
     cond do
+      # If already using `top1.nearest.of.` then don't modify it
       String.contains?(uri.host, "top1.nearest.of.") ->
         config
 
+      # if using `top2.`, rewrite to use `top1.`
       String.contains?(uri.host, "top2.nearest.of.") ->
         new_host = String.replace(uri.host, "top2.nearest.of.", "top1.nearest.of.", global: false)
         updated_uri = %URI{uri | host: new_host} |> URI.to_string()
         Keyword.put(config, :url, updated_uri)
 
+      # No DNS directives detected, add them to the host and return new config
       true ->
-        # Not detected. Add them to the Host and return new config with replaced
-        # host that includes DNS helpers
         updated_uri = %URI{uri | host: "top1.nearest.of.#{uri.host}"} |> URI.to_string()
         Keyword.put(config, :url, updated_uri)
     end
