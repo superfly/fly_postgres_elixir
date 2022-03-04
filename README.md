@@ -83,10 +83,11 @@ directly on the local replica. Other modifying functions like `insert`,
 calls to a node in your Elixir cluster running in the primary region. That
 ability is provided by the `fly_rpc` library.
 
-The `Mix.env()` is passed in to let `fly_postgres` know about your project's
-build environment. `Fly.Postgres` only attempts to rewrite the database URL when
-your app is running in `:prod` mode. When running in `:dev` or `:test`, no
-`Ecto.Repo` configuration changes are made.
+The value of the `Mix.env()` is set at build time to `@env` and passed in to let
+`fly_postgres` know about the project's build environment. `Fly.Postgres` only
+attempts to rewrite the database URL when your app is running in `:prod` mode.
+When running in `:dev` or `:test`, no `Ecto.Repo` configuration changes are
+made.
 
 ### Migration Files
 
