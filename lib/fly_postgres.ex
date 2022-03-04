@@ -6,16 +6,15 @@ defmodule Fly.Postgres do
   """
   require Logger
 
-  # Compile time setting for the build environment used.
-  @env Mix.env()
+  @type env :: :prod | :dev | :test
 
   @doc """
   Rewrite the database config based on the runtime environment.
 
   This does not make changes when running a dev or test build.
   """
-  @spec config_repo_url(config :: keyword()) :: {:ok, keyword()}
-  def config_repo_url(config, env \\ @env)
+  @spec config_repo_url(config :: keyword(), env) :: {:ok, keyword()} | no_return()
+  def config_repo_url(config, env)
 
   def config_repo_url(config, :prod) do
     # perform the rewrite when in production environment
