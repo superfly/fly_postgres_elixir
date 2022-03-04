@@ -49,9 +49,12 @@ defmodule MyApp.Repo.Local do
     otp_app: :my_app,
     adapter: Ecto.Adapters.Postgres
 
-  # Dynamically configure the database url based on runtime and build environment.
+  @env Mix.env()
+
+  # Dynamically configure the database url based on runtime and build
+  # environments.
   def init(_type, config) do
-    Fly.Postgres.config_repo_url(config, Mix.env())
+    Fly.Postgres.config_repo_url(config, @env)
   end
 end
 
