@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.5 (2022-03-03)
+
+Removed default value for `Fly.Postgres.config_repo_url/2` that was always defaulting to `:prod` when used by other apps.
+
 ## v0.2.4 (2022-03-03)
 
 * Only rewrite DB URLs in prod builds by @brainlid in https://github.com/superfly/fly_postgres_elixir/pull/24
