@@ -49,9 +49,12 @@ defmodule MyApp.Repo.Local do
     otp_app: :my_app,
     adapter: Ecto.Adapters.Postgres
 
-  # Dynamically configure the database url based on runtime environment.
+  @env Mix.env()
+
+  # Dynamically configure the database url based on runtime and build
+  # environments.
   def init(_type, config) do
-    Fly.Postgres.config_repo_url(config)
+    Fly.Postgres.config_repo_url(config, @env)
   end
 end
 
@@ -79,6 +82,12 @@ directly on the local replica. Other modifying functions like `insert`,
 `update`, and `delete` are performed on the **primary database** through proxy
 calls to a node in your Elixir cluster running in the primary region. That
 ability is provided by the `fly_rpc` library.
+
+The value of the `Mix.env()` is set at build time to `@env` and passed in to let
+`fly_postgres` know about the project's build environment. `Fly.Postgres` only
+attempts to rewrite the database URL when your app is running in `:prod` mode.
+When running in `:dev` or `:test`, no `Ecto.Repo` configuration changes are
+made.
 
 ### Migration Files
 
