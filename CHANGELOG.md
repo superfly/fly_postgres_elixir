@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.2.4 (2022-03-03)
+
+* Only rewrite DB URLs in prod builds by @brainlid in https://github.com/superfly/fly_postgres_elixir/pull/24
+
+Creates a breaking change. Projects will not compile until updated. The update is simple.
+
+In the wrapped repo file, use the following as a template.
+
+```elixir
+defmodule MyApp.Repo.Local do
+  use Ecto.Repo,
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres
+
+  @env Mix.env()
+
+  # Dynamically configure the database url based on runtime and build
+  # environments.
+  def init(_type, config) do
+    Fly.Postgres.config_repo_url(config, @env)
+  end
+end
+
+defmodule MyApp.Repo do
+  use Fly.Repo, local_repo: MyApp.Repo.Local
+end
+```
+
+This stores the build environment and passes that into the `Fly.Postgres.config_repo_url/2` function. The function changed to not attempt any URL rewriting when in `:dev` or `:test` modes. It only looks to change the URL when in `:prod` mode.
+
+See [PR #24](https://github.com/superfly/fly_postgres_elixir/pull/24) for more information.
+
 ## v0.2.3 (2022-03-01)
 
 * convert "top2" to "top1" for host url by @brainlid in https://github.com/superfly/fly_postgres_elixir/pull/23
