@@ -298,6 +298,22 @@ It is safe to use `MyApp.Repo.Local` because on Fly.io, migrations are run in th
 
 In general, it is discouraged to use `.update(...)`, `.insert(...)`, and `.delete(...)` statements in migrations. For more information on why that presents problems and alternative options, check out [this section](https://fly.io/phoenix-files/backfilling-data/) of the [Safe Ecto Migrations](https://fly.io/phoenix-files/safe-ecto-migrations/) series.
 
+## Production Environment
+
+### Prevent temporary outages during deployments
+
+When deploying on Fly.io, a new instance is rolled out before removing the old instance. This creates a period of time where both new and old instances are deployed together. By default, when deploying a Phoenix application, a new BEAM cookie is generated for each deployment. When the new instance rolls out with a new BEAM cookie, the old and new instances will not cluster together. BEAM instances must have the same cookie in order to connect. This is by design.
+
+This means a newly deployed application running in a secondary region using [fly_postgres](https://github.com/superfly/fly_postgres_elixir) is unable to perform writes to the older application running in the primary region. It is possible for writes to fail during that rollout window.
+
+To prevent this problem, the BEAM cookie can be explicitly set instead of randomly generated for new builds. When explicitly set, the newly deployed application is still able to connect and cluster with the older application running in the primary region.
+
+Here is a guide to setting a static cookie for your project that is written into the code itself. This is fine to do because the cookie isn't considered a secret used for security.
+
+[fly.io/docs/app-guides/elixir-static-cookie/](https://fly.io/docs/app-guides/elixir-static-cookie/)
+
+When the cookie is static and unchanged from one deployment to the next, then applications can continue to cluster and access the applications running in primary region.
+
 ## LSN Polling
 
 The library polls the local database for what point in the replication process
