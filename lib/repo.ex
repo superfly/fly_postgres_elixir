@@ -311,7 +311,7 @@ defmodule Fly.Repo do
       See `Ecto.Repo.reload!/2` for full documentation.
       """
       def reload!(struct_or_structs, opts \\ []) do
-        unquote(__MODULE__).__exec_local__(:reload, [struct_or_structs, opts])
+        unquote(__MODULE__).__exec_local__(:reload!, [struct_or_structs, opts])
       end
 
       @doc """
