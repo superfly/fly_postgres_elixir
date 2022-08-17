@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.6 (2022-08-17)
+
+Fixed `reload!` wrapped function being incorrectly mapped to `reload` (missing the "!"). Merged [PR #26](https://github.com/superfly/fly_postgres_elixir/pull/26)
+
 ## v0.2.5 (2022-03-03)
 
 Removed default value for `Fly.Postgres.config_repo_url/2` that was always defaulting to `:prod` when used by other apps.
