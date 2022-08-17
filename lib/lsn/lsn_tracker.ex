@@ -251,7 +251,7 @@ defmodule Fly.Postgres.LSN.Tracker do
     lsn
   end
 
-  # Process the list of notifcation requests in the ETS table. If the tracked
+  # Process the list of notification requests in the ETS table. If the tracked
   # insert LSN has been replicated so it is now local, notify the pid and remove
   # the entry.
   @doc false
@@ -287,12 +287,12 @@ defmodule Fly.Postgres.LSN.Tracker do
     :ets.match_object(requests_table, {:"$1", :"$2"})
   end
 
-  # Get the ETS cache tracker table name. Derrived from the tracker config
+  # Get the ETS cache tracker table name. Derived from the tracker config
   # becomes easy. Each instance of the tracker has it it's own set of tables.
   @doc false
   # Private function
   def tracker_table_name(base_table_name, tracker_name) when is_atom(tracker_name) do
-    # NOTE: This intetionally creates an atom. The input values come from
+    # NOTE: This intentionally creates an atom. The input values come from
     # developer code, not user input.
     String.to_atom(Atom.to_string(base_table_name) <> "_" <> Atom.to_string(tracker_name))
   end
