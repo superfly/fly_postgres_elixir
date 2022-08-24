@@ -10,7 +10,7 @@ defmodule Core.LSN.Supervisor do
     end
 
     name = Keyword.get(opts, :name, Core.LSN.Supervisor)
-    base_name = Keyword.put(opts, :name, Core.LSN)
+    base_name = Keyword.get(opts, :name, Core.LSN)
     Supervisor.start_link(__MODULE__, Keyword.put(opts, :base_name, base_name), name: name)
   end
 
