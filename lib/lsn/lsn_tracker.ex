@@ -351,7 +351,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   """
   @spec get_ets_table_name(atom(), opts :: keyword()) :: atom()
   def get_ets_table_name(base_table_name, opts \\ []) do
-    base_name = Keyword.get(opts, :base_name) || Core.LSN.Supervisor
+    base_name = Keyword.get(opts, :base_name) || Core.LSN
 
     Keyword.get_lazy(opts, :override_table_name, fn ->
       # NOTE: This intentionally creates an atom. The input values come from
