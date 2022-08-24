@@ -6,17 +6,18 @@ defmodule Core.LSN.Supervisor do
 
   def start_link(opts \\ []) do
     if !Keyword.has_key?(opts, :repo) do
-      raise ArgumentError, ":repo must be given when starting the LSN tracking processes"
+      raise ArgumentError, ":repo is required when starting the LSN tracking processes"
     end
 
-    name = Keyword.get(opts, :name, __MODULE__)
-    Supervisor.start_link(__MODULE__, Keyword.put(opts, :name, name), name: name)
+    name = Keyword.get(opts, :name, Core.LSN.Supervisor)
+    base_name = Keyword.put(opts, :name, Core.LSN)
+    Supervisor.start_link(__MODULE__, Keyword.put(opts, :base_name, base_name), name: name)
   end
 
   @impl true
   def init(opts) do
     repo_module = Keyword.get(opts, :repo)
-    base_name = Keyword.get(opts, :name)
+    base_name = Keyword.get(opts, :base_name)
 
     children = [
       {Tracker, [repo: repo_module, base_name: base_name]},
