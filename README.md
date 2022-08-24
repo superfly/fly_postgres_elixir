@@ -5,7 +5,7 @@ Ecto and PostgreSQL in a primary/replica configuration on [Fly.io](https://fly.i
 
 [Online Documentation](https://hexdocs.pm/fly_postgres)
 
-[Mark Ericksen's ElixirConf 2021 presentation](https://www.youtube.com/watch?v=IqnZnFpxLjI) explaining what this library is for
+[Mark Ericksen's ElixirConf 2021 presentation](https://www.youtube.com/watch?v=IqnZnFpxLjI) explains more about what this library is for
 and the problems it helps solve.
 
 ## Installation
@@ -21,7 +21,7 @@ def deps do
 end
 ```
 
-Note that `fly_postgres` depends on `fly_rpc` so it will be pulled in as well.
+Note that `fly_postgres` depends on `fly_rpc` so it is pulled in as well.
 The configuration section below includes the relevant parts for `fly_rpc`.
 
 ## Configuration
@@ -69,7 +69,7 @@ project's `Ecto.Repo`. The new repo has the same name as your original
 `Ecto.Repo`, so your application will be referring to it now when talking to the
 database.
 
-The other change was to add the `init` function to your `Ecto.Repo`. This
+The other change adds the `init` function to your `Ecto.Repo`. This
 dynamically configures your `Ecto.Repo` to connect to the **primary** (writable)
 database when your application is running in the primary region. When your
 application is **not** in the primary region, it is configured to connect to the
@@ -91,7 +91,7 @@ made.
 
 ### Migration Files
 
-After changing your repo name, generating migrations can end up in the wrong place, or at least not where you want them.
+After changing your repo name, generating migrations can end up in the wrong place, or at least not where we want them.
 
 You can override the inferred location in your config:
 
@@ -117,7 +117,7 @@ actual `Ecto.Repo`. Following the above example, it should point to
 - `config/config.exs` needs to identify your local repo module. Ex: `ecto_repos: [MyApp.Repo.Local]`
 - `config/dev.exs`, `config/test.exs`, `config/runtime.exs` - any special repo configuration should refer to your local repo.
 
-With these project plumbing changes, you application code can stay largely untouched!
+With these project plumbing changes, you application code remains largely untouched!
 
 ### Primary Region
 
@@ -214,26 +214,27 @@ Calls that _modify_ the database like "insert, update, and delete", are
 performed through an RPC (Remote Procedure Call) in your application running in
 the primary region.
 
-In order for this to work, your application must be clustered together and
-configured to identify which region is the "primary" region. Additionally, your
-application needs to be deployed to multiple regions. There must be a deployment
-in the primary region as well.
+In order for this to work, the application must be clustered together and
+configured to identify which region is the "primary" region. Additionally, the
+application needs to be deployed to multiple regions. This assumes an instance of the application is running in the primary region as well.
 
-A call to `MyApp.Repo.insert(changeset)` will be proxied to perform the insert
+A call to `MyApp.Repo.insert(changeset)` is proxied to perform the insert
 in the primary region. If the function is already running in the primary region,
 it just executes normally locally. If the function is running in a non-primary
-region, it makes a RPC execution to run on the primary. Additionally, it gets
-the Postgres LSN (Log Sequence Number) for the database after making the change.
-The calling function then blocks, waits for the async database replication
-process to complete, and continues on once the data modification has replayed on
-the local replica.
+region, it makes a RPC execution to run on the primary.
+
+The magic bits are that it additionally fetches the Postgres LSN (Log Sequence
+Number) for the database after making the change. The calling function then
+blocks, waits for the async database replication process to complete, and
+continues on once the data modification has replayed on the local replica.
 
 In this way, it becomes seamless for you and your code! You get the benefits of
 being globally distributed and running closer to your users without re-designing your application!
 
-By default, a Repo function that modifies the database is proxied to the server
-and it waits for the data to be replicated locally before continuing. Passing
-the `await: false` option instructs the proxy code to not wait for replication.
+By default, a Repo function that modifies the database is proxied to a primary server
+and waits for the data to be replicated locally before continuing. Passing
+the `await: false` option instructs the proxy code to not wait for replication to complete.
+
 This is helpful when you only need the function result or the data is not
 immediately needed locally.
 
@@ -248,10 +249,10 @@ MyApp.Repo.delete(item, await: false)
 ### Explicit RPC Usage
 
 When business logic code makes a number of changes or does some back and forth
-with the database, the "Automatic Usage" will be too slow. An example is looping
+with the database, the "Automatic Usage" is too slow. An example is looping
 through a list and performing a database insert on each iteration. Waiting for
-the insert to complete and be locally replicated before performing the next
-iteration could be very slow.
+each insert to complete and be locally replicated before performing the next
+iteration could be very slow!
 
 For those cases, execute the function that does all the database work but do it
 in the primary region where it is physically close to the database.
@@ -260,8 +261,8 @@ in the primary region where it is physically close to the database.
 Fly.Postgres.rpc_and_wait(MyModule, :do_complex_work, [arg1, arg2])
 ```
 
-The function will be executed in the primary region and it blocks locally until
-any relevant database changes are replicated locally.
+The function is executed in the primary region and locally, blocks until
+any relevant database changes are replicated.
 
 ### Explicit RPC but don't Wait for Replication
 
@@ -292,7 +293,7 @@ The solution is to explicitly use the local repo instead.
 
 **Explanation:**
 
-It doesn't work to use the repo wrapper because the Tracker started in your `MyApp.Application` hasn't been started. You application is not started because you can have GenServers that make queries and interact with the database. When running migrations, those parts of the application shouldn't be running because the very structure of the database can change.
+It doesn't work to use the repo wrapper in a migration because the Tracker started in your `MyApp.Application` hasn't been started. When running migrations, the "Application" is not started because we could have GenServers that make queries and interact with the database. When running migrations, those parts of the application shouldn't be running because the very structure of the database can change.
 
 It is safe to use `MyApp.Repo.Local` because on Fly.io, migrations are run in the primary region that already has direct access to the writable database.
 
@@ -302,11 +303,11 @@ In general, it is discouraged to use `.update(...)`, `.insert(...)`, and `.delet
 
 ### Prevent temporary outages during deployments
 
-When deploying on Fly.io, a new instance is rolled out before removing the old instance. This creates a period of time where both new and old instances are deployed together. By default, when deploying a Phoenix application, a new BEAM cookie is generated for each deployment. When the new instance rolls out with a new BEAM cookie, the old and new instances will not cluster together. BEAM instances must have the same cookie in order to connect. This is by design.
+When deploying on [Fly.io](https://fly.io), a new instance is rolled out before removing the old instance. This creates a period of time where both new and old instances are deployed together. By default, when deploying a Phoenix application, a new BEAM cookie is generated for each deployment. When the new instance rolls out with a new BEAM cookie, the old and new instances will not cluster together. BEAM instances must have the same cookie in order to connect. This is by design.
 
 This means a newly deployed application running in a secondary region using [fly_postgres](https://github.com/superfly/fly_postgres_elixir) is unable to perform writes to the older application running in the primary region. It is possible for writes to fail during that rollout window.
 
-To prevent this problem, the BEAM cookie can be explicitly set instead of randomly generated for new builds. When explicitly set, the newly deployed application is still able to connect and cluster with the older application running in the primary region.
+To prevent this problem, the BEAM cookie can be explicitly set instead of using a randomly generated one for new builds. When explicitly set, the newly deployed application is still able to connect and cluster with the older application running in the primary region.
 
 Here is a guide to setting a static cookie for your project that is written into the code itself. This is fine to do because the cookie isn't considered a secret used for security.
 
@@ -340,16 +341,16 @@ The `fly_postgres` library makes an important assumption: that the app instance
 is always running in a region with either the primary or replica database.
 
 To make your deployments reliably end up in a desired region, we'll disable the
-backup regions. Or rather, explicitly set which regions should be use as backup
+backup regions. Or rather, explicitly set which regions to use as backup
 regions.
 
-To see you current set of backup regions:
+To see the current set of backup regions:
 
 ```shell
 fly regions backup list
 ```
 
-If you want to serve 2 regions like `lax` and `syd`, then you can the backup regions like this:
+If we want to serve 2 regions like `lax` and `syd`, then we can set the backup regions like this:
 
 ```shell
 fly regions backup lax syd

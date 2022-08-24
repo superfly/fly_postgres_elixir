@@ -221,4 +221,34 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       assert expected == Tracker.tracker_table_name(@test_requests, Tracker)
     end
   end
+
+  describe "perform_lsn_check/3" do
+    test "when no change: notifies pid of timeout" do
+      FakeRepo.set_replay_lsn(nil)
+      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
+      assert_received :lsn_check_timed_out
+    end
+
+    test "when update found: notifies pid of update", %{replay_lsn: replay} do
+      lsn = %Fly.Postgres.LSN{fpart: 0, offset: 1_000_000, source: :replay}
+      FakeRepo.set_replay_lsn(lsn)
+      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
+      assert_received :lsn_updated
+    end
+
+    test "when update found: writes update to LSN ETS table", %{replay_lsn: replay} do
+      lsn = %Fly.Postgres.LSN{fpart: 0, offset: 1_000_000, source: :replay}
+      FakeRepo.set_replay_lsn(lsn)
+      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
+      # updated in the ETS table
+      assert lsn == Tracker.get_last_replay(override_table_name: @test_lsn_table)
+    end
+
+    test "when exception: notifies pid of error" do
+      FakeRepo.set_replay_lsn(LSN.new("0/9999999", :replay))
+
+      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
+      assert_received :lsn_check_errored
+    end
+  end
 end

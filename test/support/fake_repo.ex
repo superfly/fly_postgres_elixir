@@ -25,23 +25,50 @@ defmodule Fly.Postgres.FakeRepo do
     {:ok, state}
   end
 
+  def set_replay_lsn(nil) do
+    GenServer.call(FakeRepo, {:set_replay_lsn, nil})
+  end
+
   def set_replay_lsn(%LSN{} = lsn) do
-    GenServer.call(FakeRepo, {:set_replay_lsn, lsn})
+    GenServer.call(FakeRepo, {:set_replay_lsn, LSN.to_text(lsn)})
   end
 
   def set_insert_lsn(%LSN{} = lsn) do
-    GenServer.call(FakeRepo, {:set_insert_lsn, lsn})
+    GenServer.call(FakeRepo, {:set_insert_lsn, LSN.to_text(lsn)})
   end
 
   def query!("select CAST(pg_last_wal_replay_lsn() AS TEXT)") do
-    %LSN{} = lsn = GenServer.call(FakeRepo, :get_replay_lsn)
-    %Postgrex.Result{rows: [[lsn_to_text(lsn)]]}
+    lsn_text = GenServer.call(FakeRepo, :get_replay_lsn)
+    %Postgrex.Result{rows: [[lsn_text]]}
   end
 
   def query!("select CAST(pg_current_wal_insert_lsn() AS TEXT)") do
-    %LSN{} = lsn = GenServer.call(FakeRepo, :get_insert_lsn)
-    %Postgrex.Result{rows: [[lsn_to_text(lsn)]]}
+    lsn_text = GenServer.call(FakeRepo, :get_insert_lsn)
+    %Postgrex.Result{rows: [[lsn_text]]}
   end
+
+  def query!("SELECT watch_for_lsn_change($1, 2);", [_value]) do
+    return_value = GenServer.call(FakeRepo, :get_replay_lsn)
+    %Postgrex.Result{rows: [[return_value]]}
+  end
+
+  # %Postgrex.Result{
+  #   columns: ["watch_for_lsn_change"],
+  #   command: :select,
+  #   connection_id: 313916,
+  #   messages: [],
+  #   num_rows: 1,
+  #   rows: [[nil]]
+  # }
+
+  # %Postgrex.Result{
+  #   columns: ["watch_for_lsn_change"],
+  #   command: :select,
+  #   connection_id: 319654,
+  #   messages: [],
+  #   num_rows: 1,
+  #   rows: [["0/294D9490"]]
+  # }
 
   def query_replay_count do
     GenServer.call(FakeRepo, :query_replay_count)
