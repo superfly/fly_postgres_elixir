@@ -38,7 +38,8 @@ defmodule Fly.Postgres.LSN.Tracker do
       raise ArgumentError, ":repo must be given when starting the LSN Tracker"
     end
 
-    name = get_name(Keyword.fetch!(opts, :base_name))
+    base_name = Keyword.fetch!(opts, :base_name)
+    name = get_name(base_name)
     GenServer.start_link(__MODULE__, Keyword.put(opts, :name, name), name: name)
   end
 
