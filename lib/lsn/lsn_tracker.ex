@@ -292,8 +292,8 @@ defmodule Fly.Postgres.LSN.Tracker do
   @doc false
   # Private function
   def process_request_entries(base_name) do
-    req_table = get_request_tracking_table(base_name)
-    lsn_table = get_lsn_cache_table(base_name)
+    req_table = get_request_tracking_table(base_name: base_name)
+    lsn_table = get_lsn_cache_table(base_name: base_name)
 
     case fetch_request_entries(req_table) do
       [] ->
