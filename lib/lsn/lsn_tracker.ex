@@ -220,9 +220,6 @@ defmodule Fly.Postgres.LSN.Tracker do
     cache_table_name = Keyword.get(opts, :lsn_table_name, default_cache_table_name)
     requests_table_name = Keyword.get(opts, :requests_table_name, default_request_table_name)
 
-    IO.inspect(cache_table_name, label: "LSN CACHE TABLE NAME")
-    IO.inspect(requests_table_name, label: "REQUESTS TABLE NAME")
-
     # setup ETS table for caching most recently read DB LSN value
     tab_lsn_cache = :ets.new(cache_table_name, [:named_table, :public, read_concurrency: true])
     # insert special entry for which repo this tracker is using

@@ -47,7 +47,6 @@ defmodule Fly.Postgres.LSN.Reader do
     # name of the tracker process
     # tracker_name = Tracker.get_name(base_name)
 
-    IO.inspect(opts, label: "READER OPTS")
     lsn_cache_table = Tracker.get_lsn_cache_table(opts)
     requests_table = Tracker.get_request_tracking_table(opts)
 
