@@ -165,6 +165,9 @@ defmodule Fly.Postgres do
   def rpc_and_wait(module, func, args, opts \\ []) do
     rpc_timeout = Keyword.get(opts, :rpc_timeout, 5_000)
 
+
+    start_time = System.os_time(:millisecond)
+
     {lsn_value, result} =
       Fly.RPC.rpc_region(:primary, __MODULE__, :__rpc_lsn__, [module, func, args, opts],
         timeout: rpc_timeout
@@ -172,6 +175,7 @@ defmodule Fly.Postgres do
 
     case Fly.Postgres.LSN.Tracker.request_and_await_notification(lsn_value, opts) do
       :ready ->
+        verbose_log(:info, fn -> "Total rpc_and_wait time: #{inspect(System.os_time(:millisecond) - start_time)}msec" end)
         result
 
       {:error, :timeout} ->
@@ -192,5 +196,14 @@ defmodule Fly.Postgres do
     lsn_value = Fly.Postgres.LSN.current_wal_insert(Fly.Postgres.local_repo(opts))
 
     {lsn_value, result}
+  end
+
+  @doc """
+  Generate and log "verbose" log messages only if configured.
+  """
+  def verbose_log(kind, func) do
+    if Application.get_env(:fly_postgres, :verbose_logging) do
+      Logger.log(kind, func)
+    end
   end
 end

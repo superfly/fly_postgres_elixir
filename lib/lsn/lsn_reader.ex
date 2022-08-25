@@ -66,7 +66,7 @@ defmodule Fly.Postgres.LSN.Reader do
   end
 
   def handle_info(:watch_for_lsn_change, state) do
-    # TODO: Read the current LSN from the cache
+    # Read the current LSN from the cache
     last_lsn = Tracker.get_last_replay(base_name: state.base_name)
 
     # execute stored procedure
@@ -76,7 +76,7 @@ defmodule Fly.Postgres.LSN.Reader do
         :ok
 
       %LSN{} = new_lsn ->
-        # TODO: write the update LSN to the cache and process any pending requests
+        # write the update LSN to the cache and process any pending requests
         Tracker.write_lsn_to_cache(new_lsn, state.lsn_table)
         Tracker.process_request_entries(state.base_name)
         :ok
@@ -88,8 +88,8 @@ defmodule Fly.Postgres.LSN.Reader do
     {:noreply, state}
   end
 
-  #
-  def conditionally_start_watching() do
+  # Only start the watching process if running in a non-primary region.
+  defp conditionally_start_watching() do
     if Fly.is_primary?() do
       Logger.info("Detected running on primary. No local replication to track.")
     else
@@ -97,41 +97,6 @@ defmodule Fly.Postgres.LSN.Reader do
       send(self(), :watch_for_lsn_change)
     end
   end
-
-  # ###
-  # ### ASYNC PROCESS FUNCTIONS
-  # ###
-
-  # @doc """
-  # Executes long running (looping) stored procedure that watches for LSN
-  # replication updates.
-  # """
-  # def perform_lsn_check(server_pid, lsn_table, repo) do
-  #   # read the last known LSN value from the lsn_table
-  #   last_replay = get_last_replay(override_table_name: lsn_table)
-
-  #   try do
-  #     # Execute stored procedure using "from" lsn value. Query can fail if DB
-  #     # connection is severed while the long-running (looping) stored procedure
-  #     # is working. Detect the DB connection crash and handle it. Notify server
-  #     # pid and let the process die.
-  #     case Fly.Postgres.LSN.last_wal_replay_watch(repo, last_replay) do
-  #       nil ->
-  #         # No change by the end of the timeout
-  #         send(server_pid, :lsn_check_timed_out)
-
-  #       %LSN{} = lsn ->
-  #         # store LSN result
-  #         write_lsn_to_cache(lsn, lsn_table)
-  #         # notify server_pid of result
-  #         send(server_pid, :lsn_updated)
-  #     end
-  #   rescue
-  #     error ->
-  #       Logger.error("Failure checking for LSN update in DB. Error: #{inspect(error)}")
-  #       send(server_pid, :lsn_check_errored)
-  #   end
-  # end
 
   @doc """
   Get the name of the reader instance that is derived from the base tracking name.

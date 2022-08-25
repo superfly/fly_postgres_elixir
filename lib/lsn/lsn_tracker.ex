@@ -20,6 +20,7 @@ defmodule Fly.Postgres.LSN.Tracker do
   """
   use GenServer
   require Logger
+  import Fly.Postgres, only: [verbose_log: 2]
 
   alias Fly.Postgres.LSN
 
@@ -193,12 +194,6 @@ defmodule Fly.Postgres.LSN.Tracker do
     end
   end
 
-  defp verbose_log(kind, func) do
-    if Application.get_env(:fly_postgres, :verbose_logging) do
-      Logger.log(kind, func)
-    end
-  end
-
   ###
   ### SERVER CALLBACKS
   ###
@@ -206,7 +201,6 @@ defmodule Fly.Postgres.LSN.Tracker do
   def init(opts) do
     repo = Keyword.fetch!(opts, :repo)
     # name of the tracker process
-    # tracker_name = Keyword.fetch!(opts, :name)
     base_name = Keyword.fetch!(opts, :base_name)
 
     # Start with the table names to use for this tracker according to the name of the process.
@@ -233,16 +227,12 @@ defmodule Fly.Postgres.LSN.Tracker do
       %{
         base_name: Keyword.get(opts, :base_name),
         name: Keyword.get(opts, :name),
-        # tracker_name: tracker_name,
         lsn_table: tab_lsn_cache,
         requests_table: tab_requests,
-        #  frequency: Keyword.get(opts, :frequency, 100),
         repo: repo
       }
     }
   end
-
-  # TODO: Keep these here, doc false, call from Reader. Don't pass "state". Be more explicit.
 
   @doc """
   Write the latest LSN value to the cache. Don't record a `nil` LSN value.
@@ -256,36 +246,6 @@ defmodule Fly.Postgres.LSN.Tracker do
     :ok
   end
 
-  # TODO: Call this function from reader. It knows when it's changed. Keep code here? I think so.
-
-  # # Process the list of notification requests in the ETS table. If the tracked
-  # # insert LSN has been replicated so it is now local, notify the pid and remove
-  # # the entry.
-  # @doc false
-  # # Private function
-  # def process_request_entries(%{requests_table: requests_table} = state) do
-  #   case fetch_request_entries(requests_table) do
-  #     [] ->
-  #       # Nothing to do. No outstanding requests being tracked
-  #       :ok
-
-  #     requests ->
-  #       # We have requests to process. Query for the latest replication LSN
-  #       last_replay = get_last_replay(override_table_name: state.lsn_table)
-
-  #       # Cycle and notify if replicated
-  #       Enum.each(requests, fn {pid, lsn_insert} = entry ->
-  #         # If the tracked LSN was already replicated, notify the pid and remove the
-  #         # entry
-  #         if Fly.Postgres.LSN.replicated?(last_replay, lsn_insert) do
-  #           # notify the requesting pid that the LSN was replicated
-  #           send(pid, {:lsn_replicated, entry})
-  #           # delete the request from the ETS table
-  #           :ets.delete(requests_table, pid)
-  #         end
-  #       end)
-  #   end
-  # end
   # Process the list of notification requests in the ETS table. If the tracked
   # insert LSN has been replicated so it is now local, notify the pid and remove
   # the entry.
