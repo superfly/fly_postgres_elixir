@@ -110,3 +110,11 @@ defmodule Fly.Postgres.LSN do
     end
   end
 end
+
+defimpl Inspect, for: Fly.Postgres.LSN do
+  import Inspect.Algebra
+
+  def inspect(lsn, _opts) do
+    concat(["#LSN<", Fly.Postgres.LSN.to_text(lsn), ">"])
+  end
+end
