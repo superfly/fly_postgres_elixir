@@ -173,11 +173,11 @@ defmodule Fly.Postgres do
 
     case Fly.Postgres.LSN.Tracker.request_and_await_notification(lsn_value, opts) do
       :ready ->
-        verbose_log(:info, fn -> "Total rpc_and_wait time: #{inspect(System.os_time(:millisecond) - start_time)}msec" end)
+        verbose_log(:info, fn -> "LSN TOTAL rpc_and_wait: #{inspect(System.os_time(:millisecond) - start_time)}msec" end)
         result
 
       {:error, :timeout} ->
-        Logger.error("RPC notification timeout calling #{Fly.mfa_string(module, func, args)}}")
+        Logger.error("LSN RPC notification timeout calling #{Fly.mfa_string(module, func, args)}}")
         exit(:timeout)
     end
   end
