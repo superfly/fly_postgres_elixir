@@ -164,8 +164,6 @@ defmodule Fly.Postgres do
   """
   def rpc_and_wait(module, func, args, opts \\ []) do
     rpc_timeout = Keyword.get(opts, :rpc_timeout, 5_000)
-
-
     start_time = System.os_time(:millisecond)
 
     {lsn_value, result} =

@@ -112,8 +112,6 @@ defmodule Fly.Postgres.LSN.Tracker do
   """
   @spec request_notification(Fly.Postgres.LSN.t(), opts :: keyword()) :: :ok
   def request_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
-    verbose_log(:info, fn -> "Requesting replication notification: #{inspect(self())}" end)
-
     table_name = get_request_tracking_table(opts)
 
     # This uses the pid of the requesting process
