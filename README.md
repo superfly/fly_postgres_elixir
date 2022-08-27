@@ -199,6 +199,32 @@ defmodule MyApp.Application do
 end
 ```
 
+### Stored Procedure
+
+Create the stored procedure used to help monitor when Log Sequence Numbers (LSNs) change indicating data was replicated.
+
+```
+mix ecto.gen.migration add_fly_postgres_proc
+```
+
+```elixir
+mix ecto.gen.migration add_fly_postgres_proc
+defmodule MyApp.Repo.Local.Migrations.AddFlyPostgresProc do
+  use Ecto.Migration
+
+  def up do
+    Fly.Postgres.Migrations.V01.up()
+  end
+
+  def down do
+    Fly.Postgres.Migrations.V01.down()
+  end
+end
+
+```
+
+The stored procedure is only being executed when in remote (non-primary) regions. It actively watches for replication changes with the Postgres WAL (Write Ahead Log).
+
 ## Usage
 
 ### Local Development
