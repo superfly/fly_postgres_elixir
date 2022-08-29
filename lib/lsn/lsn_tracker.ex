@@ -162,11 +162,8 @@ defmodule Fly.Postgres.LSN.Tracker do
     if Fly.is_primary?() do
       :ready
     else
-      # First check if the data is already in the cache. If so, return
+      # First check if the LSN value is already in the ETS cache. If so, return
       # immediately. Otherwise request to be notified and wait.
-      #
-      # NOTE: This does add a slight delay to RPC calls using LSN. Waits for the
-      # GenServer to run the check for the DB.
       if replicated?(lsn, opts) do
         :ready
       else
