@@ -31,8 +31,8 @@ defmodule FlyPostgres.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:fly_rpc, git: "https://github.com/superfly/fly_rpc_elixir.git", branch: "me-support-my-region-env"},
-      # {:fly_rpc, "~> 0.2.0"},
+      # {:fly_rpc, git: "https://github.com/superfly/fly_rpc_elixir.git", branch: "me-support-my-region-env"},
+      {:fly_rpc, "~> 0.2.0"},
       {:ecto_sql, ">= 3.4.0"},
       {:postgrex, ">= 0.0.0"},
       {:ex_doc, "~> 0.25", only: :dev},
