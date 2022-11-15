@@ -37,16 +37,19 @@ defmodule Fly.Postgres.FakeRepo do
     GenServer.call(FakeRepo, {:set_insert_lsn, LSN.to_text(lsn)})
   end
 
+  # Query on the replica for the last replayed LSN
   def query!("select CAST(pg_last_wal_replay_lsn() AS TEXT)") do
     lsn_text = GenServer.call(FakeRepo, :get_replay_lsn)
     %Postgrex.Result{rows: [[lsn_text]]}
   end
 
+  # Query on the primary for the newly created LSN for local changes
   def query!("select CAST(pg_current_wal_insert_lsn() AS TEXT)") do
     lsn_text = GenServer.call(FakeRepo, :get_insert_lsn)
     %Postgrex.Result{rows: [[lsn_text]]}
   end
 
+  # Execute the stored procedure that watches for replicate LSN changes
   def query!("SELECT watch_for_lsn_change($1, 2);", [_value]) do
     return_value = GenServer.call(FakeRepo, :get_replay_lsn)
     %Postgrex.Result{rows: [[return_value]]}

@@ -216,7 +216,7 @@ defmodule Fly.Postgres.LSN.Tracker do
     # setup ETS table for processes requesting notification when new matching LSN value is seen
     tab_requests = :ets.new(requests_table_name, [:named_table, :public, read_concurrency: true])
 
-    # Initial state. Default to checking every 100msec.
+    # Initial state.
     {
       :ok,
       %{
@@ -234,7 +234,12 @@ defmodule Fly.Postgres.LSN.Tracker do
   """
   @spec write_lsn_to_cache(nil | LSN.t(), lsn_table :: atom()) :: :ok
   def write_lsn_to_cache(lsn, lsn_table)
-  def write_lsn_to_cache(nil, _lsn_table), do: :ok
+
+  def write_lsn_to_cache(nil, lsn_table) do
+    # delete any cached value. Useful for testing.
+    :ets.delete(lsn_table, :last_log_replay)
+    :ok
+  end
 
   def write_lsn_to_cache(%LSN{} = lsn, lsn_table) do
     :ets.insert(lsn_table, {:last_log_replay, lsn})

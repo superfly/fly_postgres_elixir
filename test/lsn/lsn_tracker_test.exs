@@ -8,8 +8,11 @@ defmodule Fly.Postgres.LSN.TrackerTest do
   alias Fly.Postgres.LSN.Tracker
   alias Fly.Postgres.FakeRepo
 
-  @test_lsn_table :test_lsn_cache
-  @test_requests :test_lsn_requests
+  # ETS table names are derived to these value from the "base_name" and internal
+  # code.
+  @test_lsn_table :ets_cache_tester_tracker
+  @test_requests :ets_requests_tester_tracker
+  @base_name :tester
 
   setup do
     insert_lsn = %Fly.Postgres.LSN{fpart: 0, offset: 2, source: :insert}
@@ -19,9 +22,8 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
     server =
       Tracker.start_link(
-        tracker_name: :test_tracker,
-        lsn_table_name: @test_lsn_table,
-        requests_table_name: @test_requests,
+        name: :test_tracker,
+        base_name: @base_name,
         repo: FakeRepo
       )
 
@@ -37,6 +39,12 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
   describe "initial query" do
     test "starting new LSN.Tracker queries for initial replay LSN", %{state: state} do
+      assert nil ==
+               Tracker.get_last_replay(
+                 tracker: state.tracker_name,
+                 override_table_name: state.lsn_table
+               )
+
       %LSN{} =
         result =
         Tracker.get_last_replay(tracker: state.tracker_name, override_table_name: state.lsn_table)
@@ -55,17 +63,9 @@ defmodule Fly.Postgres.LSN.TrackerTest do
   end
 
   describe "get_last_replay/1" do
-    test "returns initial queries replay value", %{replay_lsn: replay_lsn, state: state} do
-      assert replay_lsn ==
-               Tracker.get_last_replay(
-                 tracker: state.tracker_name,
-                 override_table_name: state.lsn_table
-               )
-    end
-
     test "returns the stored LSN when found", %{state: state} do
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, state)
+      Tracker.write_lsn_to_cache(replay, state.lsn_table)
 
       assert replay ==
                Tracker.get_last_replay(
@@ -76,10 +76,21 @@ defmodule Fly.Postgres.LSN.TrackerTest do
   end
 
   describe "replicated?/2" do
+    test "returns false when no last replay found in the cache", %{state: state} do
+      lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
+      Tracker.write_lsn_to_cache(nil, state.lsn_table)
+
+      assert false ==
+               Tracker.replicated?(lsn,
+                 override_table_name: state.lsn_table,
+                 tracker: state.tracker_name
+               )
+    end
+
     test "returns true when the replay entry is in the cache", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, state)
+      Tracker.write_lsn_to_cache(replay, state.lsn_table)
 
       assert true ==
                Tracker.replicated?(lsn,
@@ -101,7 +112,7 @@ defmodule Fly.Postgres.LSN.TrackerTest do
     test "returns false when a matching entry is not YET present", %{state: state} do
       lsn = %LSN{fpart: 0, offset: 200_000_000, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
-      Tracker.put_lsn(replay, state)
+      Tracker.write_lsn_to_cache(replay, state.lsn_table)
 
       assert false ==
                Tracker.replicated?(lsn,
@@ -137,38 +148,92 @@ defmodule Fly.Postgres.LSN.TrackerTest do
     end
   end
 
-  describe "process_request_entries/1" do
+  describe "request_and_await_notification/2" do
     setup do
-      %{
-        tracker_name: Tracker,
-        lsn_table: @test_lsn_table,
-        requests_table: @test_requests,
-        repo: FakeRepo
-      }
+      # Default to primary as Los Angeles and local region as Chicago.
+      System.put_env("PRIMARY_REGION", "lax")
+      System.put_env("MY_REGION", "ord")
+      %{lsn: %LSN{fpart: 0, offset: 200_000_000, source: :insert}}
     end
 
-    test "when no requests registered, does nothing", state do
+    test "returns :ready when run on the primary", %{lsn: lsn} do
+      # set the current region to be the primary region
+      System.put_env("MY_REGION", "lax")
+
+      assert :ready ==
+               Tracker.request_and_await_notification(lsn, base_name: @base_name)
+    end
+
+    test "returns :ready when the LSN is already in replication cache", %{lsn: lsn} do
+      # record the insert LSN as having been replicated and cached
+      replay = %LSN{lsn | source: :replay}
+      Tracker.write_lsn_to_cache(replay, @test_lsn_table)
+
+      assert :ready ==
+               Tracker.request_and_await_notification(lsn, base_name: @base_name)
+    end
+
+    test "when not cached, registers notification request", %{lsn: lsn} do
+      result =
+        Tracker.request_and_await_notification(lsn,
+          base_name: @base_name,
+          replication_timeout: 1
+        )
+
+      # it times out
+      assert result == {:error, :timeout}
+      # request is tracked for the test process and the LSN
+      [request] = Tracker.fetch_request_entries(@test_requests)
+      assert {self(), lsn} == request
+    end
+
+    test "when receives replication notification, returns :ready", %{lsn: lsn} do
+      # send the test process the expected message so the "await"
+      # receives it and believes the LSN was replicated
+      send(self(), {:lsn_replicated, {self(), lsn}})
+
+      # check and wait for 1 second (re-checks)
+      result =
+        Tracker.request_and_await_notification(lsn,
+          base_name: @base_name,
+          replication_timeout: 1_000
+        )
+
+      assert result == :ready
+    end
+
+    test "when no notification received, returns timeout error", %{lsn: lsn} do
+      assert {:error, :timeout} ==
+               Tracker.request_and_await_notification(lsn,
+                 base_name: @base_name,
+                 replication_timeout: 1
+               )
+    end
+  end
+
+  describe "process_request_entries/1" do
+    test "when no requests registered, does nothing" do
       # first execution, report already replicated
-      assert :ok == Tracker.process_request_entries(state)
+      assert :ok == Tracker.process_request_entries(@base_name)
       refute_received {:lsn_replicated, _any}
     end
 
-    test "when a request is registered but it isn't replicated, nothing sent", state do
+    test "when a request is registered but it isn't replicated, nothing sent" do
       insert = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       Tracker.request_notification(insert, override_table_name: @test_requests)
-      assert :ok == Tracker.process_request_entries(state)
+      assert :ok == Tracker.process_request_entries(@base_name)
       refute_received {:lsn_replicated, _any}
       # Should still have ETS entry for request
       refute [] == :ets.match_object(@test_requests, {:"$1", :"$2"})
     end
 
-    test "when a request is registered and is replicated, receive notification", state do
+    test "when a request is registered and is replicated, receive notification" do
       insert = %LSN{fpart: 0, offset: 100_733_376, source: :insert}
       replay = %LSN{fpart: 0, offset: 100_733_376, source: :replay}
       Tracker.request_notification(insert, override_table_name: @test_requests)
       FakeRepo.set_replay_lsn(replay)
 
-      assert :ok == Tracker.process_request_entries(state)
+      assert :ok == Tracker.process_request_entries(@base_name)
       msg = {:lsn_replicated, {self(), insert}}
       assert_received ^msg
       # the requests table should be empty now
@@ -212,43 +277,6 @@ defmodule Fly.Postgres.LSN.TrackerTest do
 
       # Verify polling happened
       assert FakeRepo.query_replay_count() > initial_replay_count
-    end
-  end
-
-  describe "tracker_table_name/2" do
-    test "returns combined atom" do
-      expected = :"test_lsn_requests_Elixir.Fly.Postgres.LSN.Tracker"
-      assert expected == Tracker.tracker_table_name(@test_requests, Tracker)
-    end
-  end
-
-  describe "perform_lsn_check/3" do
-    test "when no change: notifies pid of timeout" do
-      FakeRepo.set_replay_lsn(nil)
-      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
-      assert_received :lsn_check_timed_out
-    end
-
-    test "when update found: notifies pid of update", %{replay_lsn: replay} do
-      lsn = %Fly.Postgres.LSN{fpart: 0, offset: 1_000_000, source: :replay}
-      FakeRepo.set_replay_lsn(lsn)
-      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
-      assert_received :lsn_updated
-    end
-
-    test "when update found: writes update to LSN ETS table", %{replay_lsn: replay} do
-      lsn = %Fly.Postgres.LSN{fpart: 0, offset: 1_000_000, source: :replay}
-      FakeRepo.set_replay_lsn(lsn)
-      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
-      # updated in the ETS table
-      assert lsn == Tracker.get_last_replay(override_table_name: @test_lsn_table)
-    end
-
-    test "when exception: notifies pid of error" do
-      FakeRepo.set_replay_lsn(LSN.new("0/9999999", :replay))
-
-      Tracker.perform_lsn_check(self(), @test_lsn_table, FakeRepo)
-      assert_received :lsn_check_errored
     end
   end
 end

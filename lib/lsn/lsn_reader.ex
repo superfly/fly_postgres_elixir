@@ -45,7 +45,7 @@ defmodule Fly.Postgres.LSN.Reader do
     # if conditions are right, request to start watching for LSN changes
     conditionally_start_watching()
 
-    # Initial state. Default to checking every 100msec.
+    # Initial state.
     {:ok,
      %{
        name: reader_name,

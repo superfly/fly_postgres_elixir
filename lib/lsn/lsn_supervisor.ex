@@ -1,4 +1,4 @@
-defmodule Core.LSN.Supervisor do
+defmodule Fly.Postgres.LSN.Supervisor do
   # Automatically defines child_spec/1
   use Supervisor
   alias Fly.Postgres.LSN.Tracker
@@ -9,7 +9,7 @@ defmodule Core.LSN.Supervisor do
       raise ArgumentError, ":repo is required when starting the LSN tracking processes"
     end
 
-    name = Keyword.get(opts, :name, Core.LSN.Supervisor)
+    name = Keyword.get(opts, :name, __MODULE__)
     base_name = Keyword.get(opts, :name, Core.LSN)
     Supervisor.start_link(__MODULE__, Keyword.put(opts, :base_name, base_name), name: name)
   end

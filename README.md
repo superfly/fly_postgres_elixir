@@ -153,8 +153,8 @@ defmodule MyApp.Application do
       {Fly.RPC, []},
       # Start the Ecto repository
       MyApp.Repo.Local,
-      # Start the tracker after your DB.
-      {Fly.Postgres.LSN.Tracker, repo: MyApp.Repo.Local},
+      # Start the supervisor for LSN tracking
+      {Fly.Postgres.LSN.Supervisor, repo: MyApp.Repo.Local},
       #...
     ]
 
