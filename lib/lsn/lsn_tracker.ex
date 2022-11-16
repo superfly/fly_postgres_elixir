@@ -206,19 +206,12 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   def init(opts) do
     repo = Keyword.fetch!(opts, :repo)
-    # name of the tracker process
+    # base name of the tracker process.
     base_name = Keyword.fetch!(opts, :base_name)
 
     # Start with the table names to use for this tracker according to the name of the process.
-    default_cache_table_name = get_ets_table_name(@lsn_table, base_name: base_name)
-    default_request_table_name = get_ets_table_name(@request_table, base_name: base_name)
-
-    # TODO: DETERMINE IF THIS OVERRIDE LOGIC IS NEEDED? DELETE?
-
-    # Tests may override the name of the tables. Take override names if given.
-    # Otherwise fallback to the default generated names.
-    cache_table_name = Keyword.get(opts, :lsn_table_name, default_cache_table_name)
-    requests_table_name = Keyword.get(opts, :requests_table_name, default_request_table_name)
+    cache_table_name = get_ets_table_name(@lsn_table, base_name: base_name)
+    requests_table_name = get_ets_table_name(@request_table, base_name: base_name)
 
     # setup ETS table for caching most recently read DB LSN value
     tab_lsn_cache = :ets.new(cache_table_name, [:named_table, :public, read_concurrency: true])
