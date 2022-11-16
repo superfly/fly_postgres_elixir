@@ -1,0 +1,115 @@
+name: Elixir CI
+
+# **What it does**: Runs project tests.
+# **Why we have it**: We want our tests to pass before merging code.
+# Resource: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#example-using-the-cache-action
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  MIX_ENV: test
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Taken from: https://github.com/actions/setup-elixir#phoenix-example
+    services:
+      db:
+        image: postgres:12
+        ports: ['5432:5432']
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Taken from: https://github.com/erlef/setup-beam
+    runs-on: ubuntu-latest
+    name: Test on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ['25.0.4']       # Define the OTP version [required]
+        elixir: ['1.14.1']    # Define the elixir version [required]
+    steps:
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{matrix.otp}}
+        elixir-version: ${{matrix.elixir}}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # # Setup Node if used
+    # - name: Setup node
+    #   uses: actions/setup-node@v3
+    #   with:
+    #     node-version: 16.14.x
+    #     cache: npm
+
+    - name: Cache deps
+      id: cache-deps
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-elixir-deps
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+    - name: Cache compiled build
+      id: cache-build
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-compiled-build
+      with:
+        path: _build
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+          ${{ runner.os }}-mix-
+
+    # Don't cache PLTs based on mix.lock hash, as Dialyzer can incrementally update even old ones
+    # Cache key based on Elixir & Erlang version (also useful when running in matrix)
+    - name: Restore PLT cache
+      uses: actions/cache@v3
+      id: plt_cache
+      with:
+        key: |
+          ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+        restore-keys: |
+          ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+        path: |
+          priv/plts
+
+    # Create PLTs if no cache was found
+    - name: Create PLTs
+      if: steps.plt_cache.outputs.cache-hit != 'true'
+      run: mix dialyzer --plt
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Compiles without warnings
+      run: mix compile --warnings-as-errors
+
+    - name: Check Formatting
+      run: mix format --check-formatted
+
+    - name: Run tests
+      run: mix test
+
+    - name: Run Sobelow checks
+      run: mix sobelow --skip --exit
+
+    - name: Run Dialyzer checks
+      run: mix dialyzer --format github
