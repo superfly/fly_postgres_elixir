@@ -4,11 +4,22 @@ defmodule Fly.Postgres.LSN.Tracker do
   requests to be notified when replication happens and the requested `:insert`
   LSN was applied locally.
 
+  ## GenServers and process responsibility
+
   The GenServer process doesn't have any special behaviors other than creating
   and owning the ETS tables that track the information.
 
   The module contains functions for writing data to, and reading data from the
   ETS tables.
+
+  The `Fly.Postgres.LSN.Reader` GenServer is responsible for interacting with
+  the database. When replication events are seen, it uses the Tracker functions
+  to write the cache and executes the notification code. However, the Reader
+  server is the process executing that code. It is designed this way on purpose
+  so that any crashes or failures happen to the Reader and caches with
+  notification requests and current replication values are not lost.
+
+  ## LSN values
 
   Tracking the LSN value is used to determine which portions of the database log
   have been replicated locally. This lets us determine if a specific transaction
