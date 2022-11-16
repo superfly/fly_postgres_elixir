@@ -93,7 +93,8 @@ defmodule Fly.Postgres.LSN.Reader do
   end
 
   @doc """
-  Get the name of the reader instance that is derived from the base tracking name.
+  Get the name of the reader instance that is derived from the base tracking
+  name.
   """
   @spec get_name(atom()) :: atom()
   def get_name(base_name) when is_atom(base_name) do
