@@ -37,7 +37,7 @@ defmodule FlyPostgres.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:ex_doc, "~> 0.25", only: :dev},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:sobelow, "~> 0.8", only: :dev}
+      {:sobelow, "~> 0.8", only: [:dev, :test]}
     ]
   end
 
