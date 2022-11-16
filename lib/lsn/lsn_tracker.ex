@@ -310,6 +310,10 @@ defmodule Fly.Postgres.LSN.Tracker do
   Get the ETS table name. It is derived from the table prefix name and the base
   name of the tracker (as there can be multiple).
   """
+  # Atom interpolation is OK here because the values are provided by dev
+  # and used to create the name of an ETS table.
+  #
+  # sobelow_skip ["DOS.BinToAtom"]
   @spec get_ets_table_name(atom(), opts :: keyword()) :: atom()
   def get_ets_table_name(base_table_name, opts \\ []) do
     base_name = Keyword.get(opts, :base_name) || Core.LSN
@@ -324,6 +328,9 @@ defmodule Fly.Postgres.LSN.Tracker do
   @doc """
   Get the name of the tracker instance that is derived from the base tracking name.
   """
+  # Atom interpolation is OK here because it is provided by dev.
+  #
+  # sobelow_skip ["DOS.BinToAtom"]
   @spec get_name(atom()) :: atom()
   def get_name(base_name) when is_atom(base_name) do
     :"#{base_name}_tracker"

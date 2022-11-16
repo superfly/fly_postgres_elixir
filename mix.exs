@@ -36,7 +36,8 @@ defmodule FlyPostgres.MixProject do
       {:ecto_sql, ">= 3.4.0"},
       {:postgrex, ">= 0.0.0"},
       {:ex_doc, "~> 0.25", only: :dev},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:sobelow, "~> 0.8", only: :dev}
     ]
   end
 

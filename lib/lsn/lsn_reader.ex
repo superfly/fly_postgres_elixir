@@ -96,6 +96,8 @@ defmodule Fly.Postgres.LSN.Reader do
   Get the name of the reader instance that is derived from the base tracking
   name.
   """
+  # Atom interpolation is OK here because it is provided by dev.
+  # sobelow_skip ["DOS.BinToAtom"]
   @spec get_name(atom()) :: atom()
   def get_name(base_name) when is_atom(base_name) do
     :"#{base_name}_reader"
