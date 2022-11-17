@@ -4,7 +4,7 @@ defmodule FlyPostgres.MixProject do
   def project do
     [
       app: :fly_postgres,
-      version: "0.2.7",
+      version: "0.3.0",
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -31,7 +31,6 @@ defmodule FlyPostgres.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:fly_rpc, git: "https://github.com/superfly/fly_rpc_elixir.git", branch: "me-support-my-region-env"},
       {:fly_rpc, "~> 0.2.0"},
       {:ecto_sql, ">= 3.4.0"},
       {:postgrex, ">= 0.0.0"},

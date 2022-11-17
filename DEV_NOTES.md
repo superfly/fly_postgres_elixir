@@ -15,7 +15,7 @@ Hex.pm package: https://hex.pm/packages/fly_postgres
 - Push the PR branch to Github.
 - Github: Merge the PR using "Squash and Merge". Delete branch.
 - Check out `main` branch. Pull the merged PR.
-- Tag the release: Ex: "v0.2.6" and push the tag.
+- Tag the release: Ex: "v0.3.0" and push the tag.
 - `mix hex.build`
 - `mix hex.publish`
 - Github release
