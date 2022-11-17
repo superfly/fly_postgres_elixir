@@ -4,7 +4,7 @@ defmodule FlyPostgres.MixProject do
   def project do
     [
       app: :fly_postgres,
-      version: "0.2.6",
+      version: "0.3.0",
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -31,15 +31,18 @@ defmodule FlyPostgres.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:fly_rpc, "~> 0.1.5"},
+      {:fly_rpc, "~> 0.2.0"},
+      {:ecto_sql, ">= 3.4.0"},
       {:postgrex, ">= 0.0.0"},
-      {:ex_doc, "~> 0.25", only: :dev}
+      {:ex_doc, "~> 0.25", only: :dev},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:sobelow, "~> 0.8", only: [:dev, :test]}
     ]
   end
 
   defp description do
     """
-    Library for working with local read-replica postgres databases and performing writes through RPC calls to other nodes in the primary Fly.io region.
+    Library for working with local read-replica Postgres databases and performing writes through RPC calls to other nodes in the primary Fly.io region.
     """
   end
 

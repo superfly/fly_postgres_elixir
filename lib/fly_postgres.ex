@@ -164,6 +164,7 @@ defmodule Fly.Postgres do
   """
   def rpc_and_wait(module, func, args, opts \\ []) do
     rpc_timeout = Keyword.get(opts, :rpc_timeout, 5_000)
+    start_time = System.os_time(:millisecond)
 
     {lsn_value, result} =
       Fly.RPC.rpc_region(:primary, __MODULE__, :__rpc_lsn__, [module, func, args, opts],
@@ -172,10 +173,17 @@ defmodule Fly.Postgres do
 
     case Fly.Postgres.LSN.Tracker.request_and_await_notification(lsn_value, opts) do
       :ready ->
+        verbose_remote_log(:info, fn ->
+          "LSN TOTAL rpc_and_wait: #{inspect(System.os_time(:millisecond) - start_time)}msec"
+        end)
+
         result
 
       {:error, :timeout} ->
-        Logger.error("RPC notification timeout calling #{Fly.mfa_string(module, func, args)}}")
+        Logger.error(
+          "LSN RPC notification timeout calling #{Fly.mfa_string(module, func, args)}}"
+        )
+
         exit(:timeout)
     end
   end
@@ -192,5 +200,24 @@ defmodule Fly.Postgres do
     lsn_value = Fly.Postgres.LSN.current_wal_insert(Fly.Postgres.local_repo(opts))
 
     {lsn_value, result}
+  end
+
+  @doc """
+  Generate and log "verbose" log messages only if enabled.
+  """
+  def verbose_log(kind, func) do
+    if Application.get_env(:fly_postgres, :verbose_logging) do
+      Logger.log(kind, func)
+    end
+  end
+
+  @doc """
+  Generate and log "verbose" log messages only if running on a remote
+  (not-primary region) and verbose logging is enabled.
+  """
+  def verbose_remote_log(kind, func) do
+    if Application.get_env(:fly_postgres, :verbose_logging) && !Fly.is_primary?() do
+      Logger.log(kind, func)
+    end
   end
 end

@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.3.0 (2022-11-17)
+
+**Breaking Change**: This is significant change to how the library works
+internally and how it is configured.
+
+This expects and depends on a new stored procedure being added to the database
+being tracked. The library makes calls to the stored procedure which internally
+loops watching for replication updates.
+
+To update, see the README sections on **Installation** and **Configuration**.
+
+The configuration change is primarily in `application.ex` with the supervision
+tree. Instead of starting the Tracker directly, this starts a Supervisor which
+is responsible for starting additional processes.
+
+Usage of the library does not change. No business logic calls are impacted. The
+changes are around needing a stored procedure and how the library processes are
+started.
+
 ## v0.2.6 (2022-08-17)
 
 Fixed `reload!` wrapped function being incorrectly mapped to `reload` (missing the "!"). Merged [PR #26](https://github.com/superfly/fly_postgres_elixir/pull/26)
