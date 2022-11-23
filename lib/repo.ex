@@ -230,6 +230,16 @@ defmodule Fly.Repo do
       end
 
       @doc """
+      Loads data into a schema or a map.
+
+      See `Ecto.Repo.load/2` for full documentation.
+
+      """
+      def load(schema_or_map, data) do
+        unquote(__MODULE__).__exec_local__(:load, [schema_or_map, data])
+      end
+
+      @doc """
       Fetches a single result from the query.
 
       See `Ecto.Repo.one/2` for full documentation.
