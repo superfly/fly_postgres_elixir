@@ -323,7 +323,7 @@ defmodule Fly.Repo do
       See `Ecto.Repo.rollback/1` for full documentation.
       """
       def rollback(value) do
-        unquote(__MODULE__).__exec_local__(:rollback, [value])
+        unquote(__MODULE__).__exec_on_primary__(:rollback, [value])
       end
 
       @doc """
