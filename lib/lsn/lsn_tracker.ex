@@ -165,10 +165,25 @@ defmodule Fly.Postgres.LSN.Tracker do
   - `:replication_timeout` - Timeout duration to wait for replication to
     complete. Value is in milliseconds.
   """
-  @spec request_and_await_notification(Fly.Postgres.LSN.t(), opts :: keyword()) ::
+  @spec request_and_await_notification(
+          :wal_lookup_failure | Fly.Postgres.LSN.t(),
+          opts :: keyword()
+        ) ::
           :ready | {:error, :timeout}
 
-  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts \\ []) do
+  def request_and_await_notification(error_or_lsn, opts \\ [])
+
+  def request_and_await_notification(:wal_lookup_failure, _opts) do
+    # Nothing to wait for. There was an error querying for the Postgres WAL. Can
+    # happen when user-code DB transactions fail.
+    verbose_log(:info, fn ->
+      "Received :wal_lookup_failure. Nothing to wait for."
+    end)
+
+    :ready
+  end
+
+  def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts) do
     # Don't register notification request or wait when on the primary
     if Fly.is_primary?() do
       :ready

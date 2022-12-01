@@ -190,6 +190,8 @@ defmodule Fly.Postgres do
 
   @doc false
   # Private function executed on the primary
+  @spec __rpc_lsn__(module(), func :: atom(), args :: [any()], opts :: Keyword.t()) ::
+          {:wal_lookup_failure | Fly.Postgres.LSN.t(), any()}
   def __rpc_lsn__(module, func, args, opts) do
     # Execute the MFA in the primary region
     result = apply(module, func, args)
@@ -197,7 +199,18 @@ defmodule Fly.Postgres do
     # Use `local_repo` here to read most recent WAL value from DB that the
     # caller needs to wait for replication to complete in order to continue and
     # have access to the data.
-    lsn_value = Fly.Postgres.LSN.current_wal_insert(Fly.Postgres.local_repo(opts))
+    # lsn_value = Fly.Postgres.LSN.current_wal_insert(Fly.Postgres.local_repo(opts))
+    lsn_value =
+      try do
+        Fly.Postgres.LSN.current_wal_insert(Fly.Postgres.local_repo(opts))
+      rescue
+        e in Postgrex.Error ->
+          verbose_log(:info, fn ->
+            "Current WAL lookup failed: #{inspect(e)}"
+          end)
+
+          :wal_lookup_failure
+      end
 
     {lsn_value, result}
   end
