@@ -317,8 +317,10 @@ defmodule Fly.Repo do
       @doc """
       Rolls back the current transaction.
 
-      Defaults to the primary database repo. Assumes the transaction was used for
-      data modification.
+      Defaults to the local database repo. When managing transactions explicitly,
+      they are always done on the local repository. If data modifications will be made,
+      then it is suggested to use `Fly.Postgres.rpc_and_wait/4` to perform the
+      operation in the primary region.
 
       See `Ecto.Repo.rollback/1` for full documentation.
       """
@@ -338,8 +340,10 @@ defmodule Fly.Repo do
       @doc """
       Runs the given function or Ecto.Multi inside a transaction.
 
-      This defaults to the primary (writable) repo as it is assumed this is being
-      used for data modification. Override to operate on the replica.
+      Defaults to the local database repo. When managing transactions explicitly,
+      they are always done on the local repository. If data modifications will be made,
+      then it is suggested to use `Fly.Postgres.rpc_and_wait/4` to perform the
+      operation in the primary region.
 
       See `Ecto.Repo.transaction/2` for full documentation.
       """
