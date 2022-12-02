@@ -25,33 +25,58 @@ defmodule Fly.Postgres.FakeRepo do
     {:ok, state}
   end
 
-  def set_replay_lsn(nil) do
-    GenServer.call(FakeRepo, {:set_replay_lsn, nil})
+  def get_insert_lsn() do
+    case GenServer.call(FakeRepo, :get_insert_lsn) do
+      :raise_postgrex_error ->
+        raise Postgrex.Error, message: "Simulating failure to query database"
+
+      lsn_result ->
+        lsn_result
+    end
+  end
+
+  def get_replay_lsn do
+    case GenServer.call(FakeRepo, :get_replay_lsn) do
+      :raise_postgrex_error ->
+        raise Postgrex.Error, message: "Simulating failure to query database"
+
+      lsn_result ->
+        lsn_result
+    end
   end
 
   def set_replay_lsn(%LSN{} = lsn) do
     GenServer.call(FakeRepo, {:set_replay_lsn, LSN.to_text(lsn)})
   end
 
+  def set_replay_lsn(value) do
+    GenServer.call(FakeRepo, {:set_replay_lsn, value})
+  end
+
   def set_insert_lsn(%LSN{} = lsn) do
+    # convert the LSN struct to the text representation
     GenServer.call(FakeRepo, {:set_insert_lsn, LSN.to_text(lsn)})
+  end
+
+  def set_insert_lsn(value) do
+    GenServer.call(FakeRepo, {:set_insert_lsn, value})
   end
 
   # Query on the replica for the last replayed LSN
   def query!("select CAST(pg_last_wal_replay_lsn() AS TEXT)") do
-    lsn_text = GenServer.call(FakeRepo, :get_replay_lsn)
+    lsn_text = get_replay_lsn()
     %Postgrex.Result{rows: [[lsn_text]]}
   end
 
   # Query on the primary for the newly created LSN for local changes
   def query!("select CAST(pg_current_wal_insert_lsn() AS TEXT)") do
-    lsn_text = GenServer.call(FakeRepo, :get_insert_lsn)
+    lsn_text = get_insert_lsn()
     %Postgrex.Result{rows: [[lsn_text]]}
   end
 
   # Execute the stored procedure that watches for replicate LSN changes
   def query!("SELECT watch_for_lsn_change($1, 2);", [_value]) do
-    return_value = GenServer.call(FakeRepo, :get_replay_lsn)
+    return_value = get_replay_lsn()
     %Postgrex.Result{rows: [[return_value]]}
   end
 

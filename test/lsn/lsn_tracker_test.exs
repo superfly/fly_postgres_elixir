@@ -139,6 +139,11 @@ defmodule Fly.Postgres.LSN.TrackerTest do
       %{lsn: %LSN{fpart: 0, offset: 200_000_000, source: :insert}}
     end
 
+    test "when LSN value is :wal_lookup_failure returns :ready" do
+      assert :ready ==
+               Tracker.request_and_await_notification(:wal_lookup_failure, base_name: @base_name)
+    end
+
     test "returns :ready when run on the primary", %{lsn: lsn} do
       # set the current region to be the primary region
       System.put_env("MY_REGION", "lax")

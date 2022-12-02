@@ -4,6 +4,9 @@ defmodule Fly.PostgresTest do
 
   doctest Fly.Postgres
 
+  alias Fly.Postgres.FakeRepo
+  alias Fly.Postgres.LSN
+
   @url_dns "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
   @url_base "postgres://some-user:some-pass@my-app-db.internal:5432/some_app"
 
@@ -138,6 +141,26 @@ defmodule Fly.PostgresTest do
       config = [stuff: "THINGS", url: @url_base]
       assert {:ok, ^config} = Fly.Postgres.config_repo_url(config, :test)
       assert {:ok, ^config} = Fly.Postgres.config_repo_url(config, :dev)
+    end
+  end
+
+  def test_function() do
+    "function result"
+  end
+
+  describe "__rpc_lsn__/4" do
+    test "returns {:wal_lookup_failure, result} when WAL lookup query errors" do
+      FakeRepo.set_insert_lsn(:raise_postgrex_error)
+
+      assert {:wal_lookup_failure, "function result"} =
+               Fly.Postgres.__rpc_lsn__(__MODULE__, :test_function, [], [])
+    end
+
+    test "returns the expected insert LSN and function result" do
+      expected_lsn = LSN.new("0/0000000", :insert)
+      FakeRepo.set_insert_lsn(expected_lsn)
+      {lsn, "function result"} = Fly.Postgres.__rpc_lsn__(__MODULE__, :test_function, [], [])
+      assert expected_lsn == lsn
     end
   end
 end

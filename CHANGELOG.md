@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1 (2022-12-02)
+
+This is a bug fix release.
+
+This update fixes [Issue #29](https://github.com/superfly/fly_postgres_elixir/issues/29), it better handles when a transaction fails due to database constraints.
+
 ## v0.3.0 (2022-11-17)
 
 **Breaking Change**: This is significant change to how the library works
