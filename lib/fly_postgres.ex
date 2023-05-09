@@ -58,7 +58,7 @@ defmodule Fly.Postgres do
       String.contains?(uri.host, ".flycast") ->
         config
 
-        # If already using `top1.nearest.of.` then don't modify it
+      # If already using `top1.nearest.of.` then don't modify it
       String.contains?(uri.host, "top1.nearest.of.") ->
         config
 
