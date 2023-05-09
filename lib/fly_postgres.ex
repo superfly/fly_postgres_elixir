@@ -54,7 +54,11 @@ defmodule Fly.Postgres do
 
     # if detected DNS helpers in the URI, return unchanged
     cond do
-      # If already using `top1.nearest.of.` then don't modify it
+      # If using .flycast don't modify
+      String.contains?(uri.host, ".flycast") ->
+        config
+
+        # If already using `top1.nearest.of.` then don't modify it
       String.contains?(uri.host, "top1.nearest.of.") ->
         config
 
