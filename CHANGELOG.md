@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.2 (2023-05-09)
+
+Merged [PR #37](https://github.com/superfly/fly_postgres_elixir/pull/37) - Support flycast db urls
+
 ## v0.3.1 (2022-12-02)
 
 This is a bug fix release.
