@@ -9,6 +9,7 @@ defmodule Fly.PostgresTest do
 
   @url_dns "postgres://some-user:some-pass@top1.nearest.of.my-app-db.internal:5432/some_app"
   @url_base "postgres://some-user:some-pass@my-app-db.internal:5432/some_app"
+  @url_flycast "postgres://some-user:some-pass@my-app-db.flycast:5432/some_app"
 
   setup do
     System.put_env([{"FLY_REGION", "abc"}, {"PRIMARY_REGION", "xyz"}, {"DATABASE_URL", @url_dns}])
@@ -19,6 +20,12 @@ defmodule Fly.PostgresTest do
   describe "rewrite_database_url!/1" do
     test "returns config unchanged when in primary region and includes DNS helper parts" do
       System.put_env([{"FLY_REGION", "xyz"}])
+      config = [stuff: "THINGS", url: System.get_env("DATABASE_URL")]
+      assert config == Fly.Postgres.rewrite_database_url!(config)
+    end
+
+    test "returns config unchanged when using flycast" do
+      System.put_env([{"FLY_REGION", "xyz"}, {"DATABASE_URL", @url_flycast}])
       config = [stuff: "THINGS", url: System.get_env("DATABASE_URL")]
       assert config == Fly.Postgres.rewrite_database_url!(config)
     end
