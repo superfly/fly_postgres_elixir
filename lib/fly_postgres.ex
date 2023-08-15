@@ -81,7 +81,7 @@ defmodule Fly.Postgres do
   @spec rewrite_replica_port(config :: keyword()) :: keyword()
   def rewrite_replica_port(config) do
     # if running on the primary, return config unchanged
-    if Fly.is_primary?() do
+    if Fly.RPC.is_primary?() do
       config
     else
       # Infer the replica URL. Change the port to target a replica instance.
@@ -171,7 +171,7 @@ defmodule Fly.Postgres do
     start_time = System.os_time(:millisecond)
 
     {lsn_value, result} =
-      Fly.RPC.rpc_region(:primary, __MODULE__, :__rpc_lsn__, [module, func, args, opts],
+      Fly.RPC.rpc_region(:primary, {__MODULE__, :__rpc_lsn__, [module, func, args, opts]},
         timeout: rpc_timeout
       )
 
@@ -185,7 +185,7 @@ defmodule Fly.Postgres do
 
       {:error, :timeout} ->
         Logger.error(
-          "LSN RPC notification timeout calling #{Fly.mfa_string(module, func, args)}}"
+          "LSN RPC notification timeout calling #{Fly.RPC.mfa_string({module, func, args})}}"
         )
 
         exit(:timeout)
@@ -233,7 +233,7 @@ defmodule Fly.Postgres do
   (not-primary region) and verbose logging is enabled.
   """
   def verbose_remote_log(kind, func) do
-    if Application.get_env(:fly_postgres, :verbose_logging) && !Fly.is_primary?() do
+    if Application.get_env(:fly_postgres, :verbose_logging) && !Fly.RPC.is_primary?() do
       Logger.log(kind, func)
     end
   end

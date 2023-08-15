@@ -45,8 +45,8 @@ defmodule Fly.Repo do
   called by an RPC so they run in the primary region.
 
   ```elixir
-  Fly.RPC.rpc_region(:primary, MyModule, :my_function_that_uses_multi, [my,
-  args], opts)
+  Fly.RPC.rpc_region(:primary, {MyModule, :my_function_that_uses_multi, [my,
+  args]}, opts)
   ```
   """
 

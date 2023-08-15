@@ -317,13 +317,13 @@ fire-and-forget or the function result is enough.
 For this case, you can use the `fly_rpc` library directly.
 
 ```elixir
-Fly.rpc_primary(MyModule, :do_work, [arg1, arg2])
+Fly.RPC.rpc_primary({MyModule, :do_work, [arg1, arg2]})
 ```
 
 This is a convenience function which is equivalent to the following:
 
 ```elixir
-Fly.RPC.rpc_region(:primary, MyModule, :do_work, [arg1, arg2])
+Fly.RPC.rpc_region(:primary, {MyModule, :do_work, [arg1, arg2]})
 ```
 
 This also works when modifying the database too.
