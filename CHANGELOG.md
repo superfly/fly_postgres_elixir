@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.3 (2023-08-15)
+
+Merged [PR #39](https://github.com/superfly/fly_postgres_elixir/pull/39) - Support fly_rpc v0.3
+
+`fly_rpc` v0.3 introduced breaking changes that `fly_postgres` needed to take into account.
+
 ## v0.3.2 (2023-05-09)
 
 Merged [PR #37](https://github.com/superfly/fly_postgres_elixir/pull/37) - Support flycast db urls
