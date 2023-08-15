@@ -84,7 +84,7 @@ defmodule Fly.Postgres.LSN.Reader do
 
   # Only start the watching process if running in a non-primary region.
   defp conditionally_start_watching() do
-    if Fly.is_primary?() do
+    if Fly.RPC.is_primary?() do
       Logger.info("Detected running on primary. No local replication to track.")
     else
       # request the watching procedure to start

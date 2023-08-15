@@ -185,7 +185,7 @@ defmodule Fly.Postgres.LSN.Tracker do
 
   def request_and_await_notification(%Fly.Postgres.LSN{source: :insert} = lsn, opts) do
     # Don't register notification request or wait when on the primary
-    if Fly.is_primary?() do
+    if Fly.RPC.is_primary?() do
       :ready
     else
       # First check if the LSN value is already in the ETS cache. If so, return
