@@ -395,7 +395,7 @@ defmodule Fly.Repo do
             tracker: Keyword.get(opts, :tracker)
           )
         else
-          Fly.rpc_primary(@local_repo, func, args, timeout: @timeout)
+          Fly.RPC.rpc_primary({@local_repo, func, args}, timeout: @timeout)
         end
       end
     end
