@@ -171,7 +171,7 @@ defmodule Fly.Postgres do
     start_time = System.os_time(:millisecond)
 
     {lsn_value, result} =
-      Fly.RPC.rpc_region(:primary, {__MODULE__, :__rpc_lsn__, [module, func, args, opts]},
+      Fly.RPC.rpc_region(:primary, {__MODULE__, :__rpc_lsn__, [{module, func, args}, opts]},
         timeout: rpc_timeout
       )
 
