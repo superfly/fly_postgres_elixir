@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.4 (2023-08-17)
+
+Merged [PR #41](https://github.com/superfly/fly_postgres_elixir/pull/41) - fix remaining issue from move to Fly.RPC
+
+Fixes something that was missed moving to the newer `fly_rpc` v0.3.0.
+
 ## v0.3.3 (2023-08-15)
 
 Merged [PR #39](https://github.com/superfly/fly_postgres_elixir/pull/39) - Support fly_rpc v0.3
